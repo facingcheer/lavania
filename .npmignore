@@ -1,0 +1,4 @@
+.DS_Store
+.git
+__mocks__
+node_modules

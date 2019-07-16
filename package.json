@@ -1,0 +1,21 @@
+{
+  "name": "lavania",
+  "version": "1.0.0",
+  "description": "js tools, easy to use",
+  "main": "dist/index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "NODE_ENV=production rollup -c rollup.config.js",
+    "dev": "rollup -c rollup.config.js -w"
+  },
+  "author": "facingcheer",
+  "license": "ISC",
+  "devDependencies": {
+    "@babel/core": "^7.4.5",
+    "babel-preset-es2015": "^6.24.1",
+    "eslint": "^5.16.0",
+    "rollup": "^1.12.4",
+    "rollup-plugin-babel": "^4.3.2",
+    "rollup-watch": "^4.3.1"
+  }
+}
