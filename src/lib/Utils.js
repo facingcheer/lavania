@@ -189,7 +189,6 @@ const Utils = {
     }
   },
   Coord: {
-
     getDateStr(date, noDate, noTime) {
       if (typeof date === 'number')
         date = new Date(date)
@@ -248,9 +247,10 @@ const Utils = {
       }
 
       return {
-        filteredData: result,
+        data: result,
         leftOffset: leftOffset,
-        rightOffset: rightOffset
+        rightOffset: rightOffset,
+        viewport
       }
     },
 
@@ -265,10 +265,74 @@ const Utils = {
     },
 
     seekNeatPoints(range, count) {
-      var diff = range[1] - range[0]
+      let diff = range[1] - range[0]
       if (!diff) diff = 0.001
 
-      var precision = 1
+      let precision = 1
+      if (diff > 1) {
+        while (diff / precision > 10) {
+          precision *= 10
+        }
+        precision /= 10
+      } else {
+        while (diff / precision < 10) {
+          precision /= 10
+        }
+      }
+      var multiples = [1, 2, 5, 10, 20, 50]
+      var points = []
+      multiples.forEach(function (multiple) {
+        var interval = multiple * precision
+        if (!interval) return
+
+        var newRange = []
+        var x = 0
+        if (range[1] < 0) {
+          while (x >= range[0]) {
+            if (x <= range[1])
+              newRange.push(x)
+            x -= interval
+          }
+        } else if (range[0] > 0) {
+          while (x <= range[1]) {
+            if (x >= range[0])
+              newRange.push(x)
+            x += interval
+          }
+        } else {
+          x -= interval
+          while (x >= range[0]) {
+            newRange.push(x)
+            x -= interval
+          }
+          x = 0
+          while (x <= range[1]) {
+            newRange.push(x)
+            x += interval
+          }
+        }
+
+        points.push([newRange[0] - interval, ...newRange, newRange[newRange.length - 1] + interval])
+      })
+
+      if (!points.length)
+        return []
+
+      if (points[points.length - 1].length === 5)
+        points.push([points[points.length - 1][0], points[points.length - 1][2], points[points.length - 1][4]])
+
+      for (var i = 0; i < points.length; i++) {
+        if (points[i].length <= count + 1 + 1) {
+          return points[i]
+        }
+      }
+      return points[points.length - 1]
+    },
+    seekNeatPointsOld(range, count) {
+      let diff = range[1] - range[0]
+      if (!diff) diff = 0.001
+
+      let precision = 1
       if (diff > 1) {
         while (diff / precision > 10) {
           precision *= 10
@@ -328,7 +392,6 @@ const Utils = {
           return points[i + 1]
         }
       }
-
       return points[points.length - 1]
     },
 
@@ -355,7 +418,7 @@ const Utils = {
      * @param {* style config for chart} style
      * @param {* baseValue for symmetry chart} baseValue
      */
-    adjustYRange(yRange, touchTop, style, baseValue) {
+    adjustYRange(yRange, touchTop, style, baseValue, pricePrecision) {
        // calc the vertical padding of grid
       let [yMin, yMax] = yRange
       if (!touchTop) {
@@ -374,7 +437,34 @@ const Utils = {
         const span = Math.max(Math.abs(baseValue - yMax), Math.abs(baseValue - yMin))
         yActual = [baseValue - span, baseValue + span]
       }
+
+      if (yActual[0] === yActual[1]) {
+        let offset = yActual[0] / 100
+        yActual[0] -= offset || 1 /Math.pow(10, pricePrecision)
+        yActual[1] += offset || 0.001 // maybe better generate by precision
+      }
+
       return yActual
+    }
+  },
+
+  Grid: {
+    lineCount(display, limit, span) {
+      let count = ~~(Math.abs(display[0] - display[1]) / span)
+      return count > limit.max ? limit.max : count < limit.min ? limit.min : count
+    },
+    calcGridLines(actual, lineCount, baseValue) {
+
+      let lines = []
+      if (baseValue === undefined) {
+        // no base value line specified
+        lines = Utils.Coord.seekNeatPoints(actual, lineCount)
+      } else {
+        // with base value line
+        let hm = Utils.Coord.seekNeatPoints([actual[0], baseValue], lineCount / 2 - 1)
+         lines = [...hm.slice(0, -1), ...hm.reverse().map(h => 2 * baseValue - h)]
+      }
+      return lines
     }
   }
 }

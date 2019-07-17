@@ -241,9 +241,10 @@ const Utils = {
       }
 
       return {
-        filteredData: result,
+        data: result,
         leftOffset: leftOffset,
-        rightOffset: rightOffset
+        rightOffset: rightOffset,
+        viewport
       };
     },
 
@@ -260,9 +261,74 @@ const Utils = {
     },
 
     seekNeatPoints(range, count) {
-      var diff = range[1] - range[0];
+      let diff = range[1] - range[0];
       if (!diff) diff = 0.001;
-      var precision = 1;
+      let precision = 1;
+
+      if (diff > 1) {
+        while (diff / precision > 10) {
+          precision *= 10;
+        }
+
+        precision /= 10;
+      } else {
+        while (diff / precision < 10) {
+          precision /= 10;
+        }
+      }
+
+      var multiples = [1, 2, 5, 10, 20, 50];
+      var points = [];
+      multiples.forEach(function (multiple) {
+        var interval = multiple * precision;
+        if (!interval) return;
+        var newRange = [];
+        var x = 0;
+
+        if (range[1] < 0) {
+          while (x >= range[0]) {
+            if (x <= range[1]) newRange.push(x);
+            x -= interval;
+          }
+        } else if (range[0] > 0) {
+          while (x <= range[1]) {
+            if (x >= range[0]) newRange.push(x);
+            x += interval;
+          }
+        } else {
+          x -= interval;
+
+          while (x >= range[0]) {
+            newRange.push(x);
+            x -= interval;
+          }
+
+          x = 0;
+
+          while (x <= range[1]) {
+            newRange.push(x);
+            x += interval;
+          }
+        }
+
+        points.push([newRange[0] - interval, ...newRange, newRange[newRange.length - 1] + interval]);
+      });
+      if (!points.length) return [];
+      if (points[points.length - 1].length === 5) points.push([points[points.length - 1][0], points[points.length - 1][2], points[points.length - 1][4]]);
+
+      for (var i = 0; i < points.length; i++) {
+        if (points[i].length <= count + 1 + 1) {
+          return points[i];
+        }
+      }
+
+      return points[points.length - 1];
+    },
+
+    seekNeatPointsOld(range, count) {
+      let diff = range[1] - range[0];
+      if (!diff) diff = 0.001;
+      let precision = 1;
 
       if (diff > 1) {
         while (diff / precision > 10) {
@@ -347,7 +413,7 @@ const Utils = {
      * @param {* style config for chart} style
      * @param {* baseValue for symmetry chart} baseValue
      */
-    adjustYRange(yRange, touchTop, style, baseValue) {
+    adjustYRange(yRange, touchTop, style, baseValue, pricePrecision) {
       // calc the vertical padding of grid
       let [yMin, yMax] = yRange;
 
@@ -367,7 +433,35 @@ const Utils = {
         yActual = [baseValue - span, baseValue + span];
       }
 
+      if (yActual[0] === yActual[1]) {
+        let offset = yActual[0] / 100;
+        yActual[0] -= offset || 1 / Math.pow(10, pricePrecision);
+        yActual[1] += offset || 0.001; // maybe better generate by precision
+      }
+
       return yActual;
+    }
+
+  },
+  Grid: {
+    lineCount(display, limit, span) {
+      let count = ~~(Math.abs(display[0] - display[1]) / span);
+      return count > limit.max ? limit.max : count < limit.min ? limit.min : count;
+    },
+
+    calcGridLines(actual, lineCount, baseValue) {
+      let lines = [];
+
+      if (baseValue === undefined) {
+        // no base value line specified
+        lines = Utils.Coord.seekNeatPoints(actual, lineCount);
+      } else {
+        // with base value line
+        let hm = Utils.Coord.seekNeatPoints([actual[0], baseValue], lineCount / 2 - 1);
+        lines = [...hm.slice(0, -1), ...hm.reverse().map(h => 2 * baseValue - h)];
+      }
+
+      return lines;
     }
 
   }
@@ -453,7 +547,10 @@ const DEFAULTS = function () {
         bg: '#fff',
         // 网格线的颜色
         limit: {
-          y: [2, 8]
+          y: {
+            max: 8,
+            min: 2
+          }
         },
         // 网格线间隔调整限制
         color: {
@@ -712,7 +809,7 @@ class Render {
         let prevRatio = timeRangesRatio.slice(0, index).reduce((acc, x) => {
           return acc + x;
         }, 0);
-        left = Math.round(this.style.padding.left + prevRatio * width);
+        left = Math.round(this.style.padding.left + prevRatio * chartWidth);
         right = Math.round(left + this.dataSource.timeRangesRatio[index] * chartWidth);
       } else {
         const coordWidth = chartWidth / this.dataSource.timeRanges.length;
@@ -737,28 +834,46 @@ class Render {
       paneCoord,
       paneData: paneData[index]
     }));
+    this.filterData = {
+      data: paneData.flat()
+    };
   }
 
-  genLinearCoord() {
-    this.render.genPanes.call(this);
+  filterData() {
     const {
-      data,
-      series,
-      timeRanges,
-      baseValue,
-      touchTop
+      data
     } = this.dataSource;
     const {
       viewport,
       style
     } = this;
-    let yRange = Utils.Coord.calcYRange(data, series);
-    let yActual = Utils.Coord.adjustYRange(yRange, touchTop, style, baseValue); // create coord
+    this.filterData = Utils.Coord.dataFilterByViewport(data, viewport, style);
+  }
+
+  genCoord() {
+    // for data with no timeRanges,
+    // use offset & width of data to calc data
+    const {
+      series,
+      timeIndex,
+      baseValue,
+      touchTop
+    } = this.dataSource;
+    const {
+      viewport,
+      style,
+      filterData,
+      pricePrecision
+    } = this; // calculate actual range of data
+
+    let yRange = Utils.Coord.calcYRange(filterData.data, series);
+    let yActual = Utils.Coord.adjustYRange(yRange, touchTop, style, baseValue, pricePrecision);
+    let xActual = [filterData.data[0][timeIndex], filterData.data[filterData.data.length - 1][timeIndex]]; // create coord
 
     this.coord = {
       x: {
         display: [style.padding.left, style.position.right],
-        actual: [timeRanges[0][0], timeRanges[timeRanges.length - 1][1]]
+        actual: xActual
       },
       y: {
         display: [style.position.bottom, style.padding.top],
@@ -768,156 +883,86 @@ class Render {
     };
   }
 
-  genCsCoord() {
+  genHorizLines() {
     const {
-      data,
-      series
-    } = this.dataSource;
-    const {
-      viewport,
+      coord,
       style
-    } = this; // var series = this.dataSource.series;
-    // filter data by viewport
-
-    this.filterResult = Utils.Coord.dataFilterByViewport(data, viewport, style); // calculate actual range of data
-
-    let yActual = Utils.Coord.calcYRange(this.filterResult.filteredData, series);
-    let xActual = [this.filterResult.filteredData[0][this.dataSource.timeIndex], this.filterResult.filteredData[this.filterResult.filteredData.length - 1][this.dataSource.timeIndex]]; // calc the vertical padding of grid
-
-    var verticalPadding = Utils.Coord.linearPixels2Actual(this.style.grid.span.y * 2, {
-      display: [style.position.bottom, style.padding.top],
-      actual: yActual
-    });
-    yActual[0] -= verticalPadding;
-    yActual[1] += verticalPadding; // with base value line
-
-    if (this.dataSource.baseValue !== undefined) {
-      var baseValue = this.dataSource.baseValue;
-      var span = Math.max(Math.abs(baseValue - yActual[0]), Math.abs(baseValue - yActual[1]));
-      yActual = [baseValue - span, baseValue + span];
-    } // create coord
-
-
-    this.coord = {
-      x: {
-        display: [this.style.padding.left, this.style.position.right],
-        actual: xActual
-      },
-      y: {
-        display: [this.style.position.bottom, this.style.padding.top],
-        actual: yActual
-      },
-      viewport: this.viewport
-    };
-  }
-
-  drawGrid() {
-    // calculate horizontal lines position
-    var yNum = ~~((this.coord.y.display[0] - this.coord.y.display[1]) / this.style.grid.span.y);
-    if (yNum > this.style.grid.limit.y[1]) yNum = this.style.grid.limit.y[1];
-    if (yNum < this.style.grid.limit.y[0]) yNum = this.style.grid.limit.y[0];
-    var horizLines = [];
-
-    if (this.dataSource.baseValue === undefined) {
-      // no base value line specified
-      if (this.coord.y.actual[0] === this.coord.y.actual[1]) {
-        var offset = this.coord.y.actual[0] / 100;
-        this.coord.y.actual[0] -= offset;
-        this.coord.y.actual[1] += offset;
-      }
-
-      horizLines = Utils.Coord.seekNeatPoints(this.coord.y.actual, yNum + 1);
-    } else {
-      // with base value line
-      var yActual = this.coord.y.actual;
-      var baseValue = this.dataSource.baseValue;
-      var span = (yActual[1] - yActual[0]) / 2;
-      horizLines = [yActual[0], baseValue];
-
-      while (horizLines.length < yNum) {
-        span /= 2;
-
-        for (var i = 0, limit = horizLines.length; i < limit; i++) {
-          horizLines.push(horizLines[i] + span);
-        }
-      }
-
-      horizLines.push(yActual[1]);
-    }
-
-    horizLines = horizLines.map(val => {
+    } = this;
+    const {
+      baseValue
+    } = this.dataSource;
+    let yActual = coord.y.actual;
+    let horizCount = Utils.Grid.lineCount(coord.y.display, style.grid.limit.y, style.grid.span.y);
+    let hGridLines = Utils.Grid.calcGridLines(coord.y.actual, horizCount, baseValue);
+    coord.y.actual = [hGridLines[0], hGridLines[hGridLines.length - 1]];
+    let horizLines = hGridLines.map(val => {
       return {
         actual: val,
-        display: ~~Utils.Coord.linearActual2Display(val, this.coord.y) + 0.5
+        display: ~~Utils.Coord.linearActual2Display(val, coord.y) + 0.5
       };
-    }); // draw horizontal lines
+    });
+    this.coord.horizLines = horizLines;
+  }
 
-    Draw.Stroke(this.ctx, ctx => {
-      horizLines.forEach((y, index) => {
-        ctx.moveTo(this.style.padding.left, y.display);
-        ctx.lineTo(this.style.position.right, y.display);
-      });
-    }, this.style.grid.color.x);
-    this.coord.horizLines = horizLines; // calculate vertical lines position
-
+  genVerticalLines() {
+    const {
+      style
+    } = this;
+    const {
+      timeRanges
+    } = this.dataSource;
     var verticalLines = [];
 
-    if (this.dataSource.timeRanges) {
-      // vertical grid line drawing for linear chart
-      this.dataSource.timeRanges.forEach((range, index) => {
-        if (this.dataSource.timeRangesRatio) {
-          var width = this.style.position.right - this.style.padding.left;
-          var widthRatio = this.dataSource.timeRangesRatio;
-          var prevRatio = widthRatio.slice(0, index).reduce((acc, x) => {
-            return acc + x;
-          }, 0);
-          var ratio = widthRatio[index];
-          var left = Math.round(this.style.padding.left + prevRatio * width);
-
-          if (index === this.dataSource.timeRanges.length - 1) {
-            verticalLines.push({
-              display: this.style.position.right + 0.5,
-              actual: range[1]
-            });
-          }
-
-          verticalLines.push({
-            display: left + 0.5,
-            actual: range[0]
-          });
-        } else {
-          const coordWidth = (this.style.position.right - this.style.padding.left) / this.dataSource.timeRanges.length;
-          verticalLines.push({
-            display: ~~(this.style.padding.left + coordWidth * index) + 0.5,
-            actual: range[0]
-          });
-
-          if (index === this.dataSource.timeRanges.length - 1) {
-            verticalLines.push({
-              display: this.style.position.right + 0.5,
-              actual: range[1]
-            });
-          }
-        }
+    if (timeRanges) {
+      this.panes.forEach(pane => {
+        verticalLines.push({
+          display: pane.paneCoord.x.display[0] + 0.5,
+          actual: pane.paneCoord.x.actual[0]
+        });
+      });
+      verticalLines.push({
+        display: this.panes[this.panes.length - 1].paneCoord.x.display[1] + 0.5,
+        actual: this.panes[this.panes.length - 1].paneCoord.x.actual[1]
       });
     } else {
       // vertical grid line drawing for candlestick chart
-      for (var l = this.dataSource.data.length - 1; l >= 0; l -= ~~(this.style.grid.span.x / this.viewport.width)) {
-        if (this.dataSource.data[l].x > this.style.padding.left && this.dataSource.data[l].x < this.style.position.right) verticalLines.push({
-          display: ~~this.dataSource.data[l].x + 0.5,
-          actual: this.dataSource.data[l][this.dataSource.timeIndex]
+      for (var l = this.filterData.data.length - 1; l >= 0; l -= ~~(this.style.grid.span.x / this.viewport.width)) {
+        if (this.filterData.data[l].x > style.padding.left && this.filterData.data[l].x <= style.position.right) verticalLines.push({
+          display: ~~this.filterData.data[l].x + 0.5,
+          actual: this.filterData.data[l][this.dataSource.timeIndex]
         });
       }
-    } // draw vertical lines
+    }
 
+    this.coord.verticalLines = verticalLines;
+  }
+
+  drawGrid() {
+    const {
+      coord,
+      style
+    } = this;
+    const {
+      baseValue,
+      timeRanges
+    } = this.dataSource;
+    this.render.genHorizLines.call(this);
+    this.render.genVerticalLines.call(this); // draw horizontal lines
 
     Draw.Stroke(this.ctx, ctx => {
-      verticalLines.forEach((val, ind) => {
-        ctx.moveTo(val.display, this.style.padding.top);
-        ctx.lineTo(val.display, this.style.position.bottom);
+      coord.horizLines.forEach((y, index) => {
+        ctx.moveTo(this.style.padding.left, y.display);
+        ctx.lineTo(this.style.position.right, y.display);
       });
-    }, this.style.grid.color.y);
-    this.coord.verticalLines = verticalLines;
+    }, this.style.grid.color.x); // calculate vertical lines position
+    // draw vertical lines
+
+    Draw.Stroke(this.ctx, ctx => {
+      coord.verticalLines.forEach((val, ind) => {
+        ctx.moveTo(val.display, style.padding.top);
+        ctx.lineTo(val.display, style.position.bottom);
+      });
+    }, style.grid.color.y);
   }
 
   drawMainSeries() {
@@ -973,13 +1018,13 @@ class Render {
       };
       var peaks = [];
       if (series.type !== 'candlestick') return;
-      var filteredData = this.filterResult.filteredData;
-      filteredData.forEach((item, index) => {
+      const data = this.filterData.data;
+      data.forEach((item, index) => {
         var h = ~~Utils.Coord.linearActual2Display(item[series.h], this.coord.y);
         var o = ~~Utils.Coord.linearActual2Display(item[series.o], this.coord.y);
         var c = ~~Utils.Coord.linearActual2Display(item[series.c], this.coord.y);
         var l = ~~Utils.Coord.linearActual2Display(item[series.l], this.coord.y);
-        var direction = c === o && index > 0 ? filteredData[index - 1][series.c] < item[series.c] ? 'up' : 'down' : c < o ? 'up' : 'down';
+        var direction = c === o && index > 0 ? data[index - 1][series.c] < item[series.c] ? 'up' : 'down' : c < o ? 'up' : 'down';
         lines[direction].push([~~item.x, l, h]);
         var w = this.viewport.width - 2;
         boxes[direction].push([item.x - w / 2 + 1, o > c ? c : o, w - 2, Math.abs(o - c), o, c, ~~item.x]);
@@ -1051,7 +1096,7 @@ class Render {
       });
     } else {
       this.dataSource.series.forEach(series => {
-        CandleStickIndicatorPainter[series.type] && CandleStickIndicatorPainter[series.type].call(this, this.ctx, series, this.filterResult.filteredData, this.coord);
+        CandleStickIndicatorPainter[series.type] && CandleStickIndicatorPainter[series.type].call(this, this.ctx, series, this.filterData.data, this.coord);
       });
     }
   }
@@ -1203,8 +1248,8 @@ class Render {
 
 
     if (this.dataSource.series[0].type === 'candlestick') {
-      var max = this.filterResult.filteredData[0];
-      var min = this.filterResult.filteredData[0];
+      var max = this.filterData.data[0];
+      var min = this.filterData.data[0];
       var highIndex = this.dataSource.series[0].h;
       var lowIndex = this.dataSource.series[0].l;
 
@@ -1213,7 +1258,7 @@ class Render {
         lowIndex = this.dataSource.series[0].c;
       }
 
-      this.filterResult.filteredData.forEach(item => {
+      this.filterData.data.forEach(item => {
         if (item[highIndex] > max[highIndex]) max = item;
         if (item[lowIndex] < min[lowIndex]) min = item;
       });
@@ -1273,7 +1318,6 @@ class Chart {
       this[key] = pattern[key] || this.defaults[key];
     });
     this.render = new Render();
-    console.log(this.render);
     this.genStyle(); // this.events = this.genDefaultEvents()
     // this.bindEvents()
 
@@ -1336,14 +1380,16 @@ class Chart {
     }, this.style.grid.bg);
 
     if (this.dataSource.timeRanges) {
-      this.render.genLinearCoord.call(this);
+      this.render.genPanes.call(this);
+      this.render.genCoord.call(this);
       this.render.drawGrid.call(this);
       this.render.drawMainSeries.call(this);
       this.render.drawSubSeries.call(this);
       this.render.drawAxis.call(this);
       this.render.drawAdditionalTips.call(this);
     } else {
-      this.render.genCsCoord.call(this);
+      this.render.filterData.call(this);
+      this.render.genCoord.call(this);
       this.render.drawGrid.call(this);
       this.render.drawMainSeries.call(this);
       this.render.drawSubSeries.call(this);

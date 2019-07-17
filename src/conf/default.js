@@ -36,7 +36,12 @@ const DEFAULTS = function(){
       },
       grid: {
         bg: '#fff',    // 网格线的颜色
-        limit: {y: [2, 8]},    // 网格线间隔调整限制
+        limit: {
+          y: {
+            max: 8,
+            min: 2
+          }
+        },    // 网格线间隔调整限制
         color: {x: '#f0f0f0', y: '#f0f0f0'},    // 网格线的颜色
         span: {x: 120, y: 30} //
       },

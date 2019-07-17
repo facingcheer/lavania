@@ -33,7 +33,6 @@ class Chart {
     })
 
     this.render = new Render()
-    console.log(this.render)
     this.genStyle()
 
     // this.events = this.genDefaultEvents()
@@ -107,8 +106,8 @@ class Chart {
     }, this.style.grid.bg)
 
     if (this.dataSource.timeRanges){
-
-      this.render.genLinearCoord.call(this)
+      this.render.genPanes.call(this)
+      this.render.genCoord.call(this)
       this.render.drawGrid.call(this)
       this.render.drawMainSeries.call(this)
       this.render.drawSubSeries.call(this)
@@ -116,7 +115,8 @@ class Chart {
       this.render.drawAdditionalTips.call(this)
 
     } else {
-      this.render.genCsCoord.call(this)
+      this.render.filterData.call(this)
+      this.render.genCoord.call(this)
       this.render.drawGrid.call(this)
       this.render.drawMainSeries.call(this)
       this.render.drawSubSeries.call(this)
