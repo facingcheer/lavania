@@ -242,7 +242,6 @@ const Utils = {
           if (l < leftOffset)
             leftOffset = l
         }
-
         pointerX += viewport.width
       }
 
@@ -395,14 +394,22 @@ const Utils = {
       return points[points.length - 1]
     },
 
+    halfcandleWidth(columnWidth) {
+      let half = ~~ ((columnWidth - 3) / 2)
+      let sixtyPercent = ~~(columnWidth * 0.3)
+      half = Math.min(sixtyPercent, half)
+      if(half < 1) half = 1
+      return half
+    },
+
     calcYRange(data, series) {
       var yMax = Number.MIN_VALUE
       var yMin = Number.MAX_VALUE
 
       data.forEach(d => {
         series.forEach(s => {
-          var h = d[s.type === 'candlestick' ? s.h : s.valIndex]
-          var l = d[s.type === 'candlestick' ? s.l : s.valIndex]
+          var h = d[s.type === 'candlestick' || s.type === 'OHLC' ? s.h : s.valIndex]
+          var l = d[s.type === 'candlestick' || s.type === 'OHLC' ? s.l : s.valIndex]
 
           if (h > yMax) yMax = h
           if (l < yMin) yMin = l

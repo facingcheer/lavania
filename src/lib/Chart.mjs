@@ -82,14 +82,15 @@ class Chart {
     this.ctx.font = this.style.font.size + 'px ' + this.style.font.family
     this.iaCtx.font = this.ctx.font
 
-    // this.style.padding.rightPos = this.originWidth - this.style.padding.right
-    // this.style.position.bottom = this.originHeight - this.style.padding.bottom
     this.style.position = {
       left: this.style.padding.left,
       top: this.style.padding.top,
       right: this.originWidth - this.style.padding.right,
       bottom: this.originHeight - this.style.padding.bottom
     }
+    this.dataSource.series.map(s => {
+      s.style = s.style || this.dataStyle
+    })
   }
 
   rerender(force){
@@ -107,22 +108,16 @@ class Chart {
 
     if (this.dataSource.timeRanges){
       this.render.genPanes.call(this)
-      this.render.genCoord.call(this)
-      this.render.drawGrid.call(this)
-      this.render.drawMainSeries.call(this)
-      this.render.drawSubSeries.call(this)
-      this.render.drawAxis.call(this)
-      this.render.drawAdditionalTips.call(this)
-
     } else {
       this.render.filterData.call(this)
-      this.render.genCoord.call(this)
-      this.render.drawGrid.call(this)
-      this.render.drawMainSeries.call(this)
-      this.render.drawSubSeries.call(this)
-      this.render.drawAxis.call(this)
-      this.render.drawAdditionalTips.call(this)
     }
+    this.render.genCoord.call(this)
+    this.render.drawGrid.call(this)
+    this.render.drawSeries.call(this)
+    // this.render.drawMainSeries.call(this)
+    // this.render.drawSubSeries.call(this)
+    // this.render.drawAxis.call(this)
+    // this.render.drawAdditionalTips.call(this)
 
     this.state.ready = 1
 

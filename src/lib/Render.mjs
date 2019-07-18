@@ -1,5 +1,6 @@
 import Utils from './Utils'
 import Draw from './utils/Draw'
+import Painter from './painter/index'
 
 import {
   LinearIndicatorPainter,
@@ -71,14 +72,16 @@ export default class Render {
     const { series, timeIndex, baseValue, touchTop } = this.dataSource
     const { viewport, style, filterData, pricePrecision } = this
 
-    // calculate actual range of data
-    let yRange = Utils.Coord.calcYRange(filterData.data, series)
-    let yActual = Utils.Coord.adjustYRange(yRange, touchTop, style, baseValue, pricePrecision)
-
+    // calculate actual-x-range of data
     let xActual = [
       filterData.data[0][timeIndex],
       filterData.data[filterData.data.length - 1][timeIndex]
     ]
+
+    // calculate actual range of data
+    let yRange = Utils.Coord.calcYRange(filterData.data, series)
+    // yRange的初步处理，有baseValue时对称处理，最大最小值相等时增加差异
+    let yActual = Utils.Coord.adjustYRange(yRange, touchTop, style, baseValue, pricePrecision)
 
     // create coord
     this.coord = {
@@ -87,16 +90,21 @@ export default class Render {
       y: {display: [style.position.bottom, style.padding.top], actual: yActual},
       viewport
     };
+
+
+      this.render.genHorizLines.call(this)
+      this.render.genVerticalLines.call(this)
   }
 
   genHorizLines() {
     const { coord, style } = this
-    const { baseValue } = this.dataSource
+    const { baseValue, touchTop } = this.dataSource
     let yActual = coord.y.actual
     let horizCount = Utils.Grid.lineCount(coord.y.display, style.grid.limit.y, style.grid.span.y)
     let hGridLines = Utils.Grid.calcGridLines(coord.y.actual, horizCount, baseValue)
-    coord.y.actual = [hGridLines[0], hGridLines[hGridLines.length - 1]]
-
+    if(!touchTop){
+      coord.y.actual = [hGridLines[0], hGridLines[hGridLines.length - 1]]
+    }
     let horizLines = hGridLines.map(val => {
       return {
         actual: val,
@@ -138,37 +146,53 @@ export default class Render {
 
   drawGrid() {
     const { coord, style } = this
-    const { baseValue, timeRanges } = this.dataSource
-
-    this.render.genHorizLines.call(this)
-    this.render.genVerticalLines.call(this)
     // draw horizontal lines
-    Draw.Stroke(this.ctx, ctx => {
-      coord.horizLines.forEach((y, index) => {
-        ctx.moveTo(this.style.padding.left, y.display)
-        ctx.lineTo(this.style.position.right, y.display)
-      })
-    }, this.style.grid.color.x)
-
-
-    // calculate vertical lines position
+    if (coord.horizLines) {
+      Draw.Stroke(this.ctx, ctx => {
+        coord.horizLines.forEach((y, index) => {
+          ctx.moveTo(style.padding.left, y.display)
+          ctx.lineTo(style.position.right, y.display)
+        })
+      }, style.grid.color.x)
+    }
 
 
     // draw vertical lines
-    Draw.Stroke(this.ctx, ctx => {
-      coord.verticalLines.forEach((val, ind) => {
-        ctx.moveTo(val.display, style.padding.top)
-        ctx.lineTo(val.display, style.position.bottom)
-      })
-    }, style.grid.color.y)
+    if(coord.verticalLines){
+      Draw.Stroke(this.ctx, ctx => {
+        coord.verticalLines.forEach((val, ind) => {
+          ctx.moveTo(val.display, style.padding.top)
+          ctx.lineTo(val.display, style.position.bottom)
+        })
+      }, style.grid.color.y)
+    }
+  }
+
+  drawSeries() {
+   const { series, valueIndex } = this.dataSource
+   const { coord } = this
+
+   series.map(s => {
+     if (s.type === 'line' || s.type === 'candlestick' || s.type === 'OHLC') {
+      Painter[s.type](this.ctx, this.filterData.data, coord, s)
+     }
 
 
+     if(s.type === 'column') {
+       if(this.dataSource.timeRanges) {
+          Painter.panesColumn(this.ctx, this.panes, coord, s)
+       }
+       if(!this.dataSource.timeRanges) {
+          Painter.column(this.ctx, this.filterData.data, coord, s, this.style.position.bottom)
+        }
+     }
+   })
   }
 
   drawMainSeries() {
     // draw the first series as main series
     var mainSeries = this.dataSource.series[0]
-    if (mainSeries.type === 'linear') {
+    if (mainSeries.type === 'line') {
       var points = []
     // points position calculation
       this.panes.forEach((pane, index) => {
@@ -181,6 +205,9 @@ export default class Render {
         })
         points.push(panePoints)
       })
+
+      console.log('points', points)
+      console.log(this.filterData.data)
 
       // use points position to draw line
       // loop panes then loop points in panes
@@ -215,6 +242,7 @@ export default class Render {
           }, gradient)
       })
     } else {
+
       var series = this.dataSource.series[0];
       var lines = {up: [], down: []};
       var boxes = {up: [], down: []};
@@ -295,7 +323,6 @@ export default class Render {
             peaks.forEach((peak, index) => {
               if (!index)
                 ctx.moveTo(peak[0], peak[1]);
-
               ctx.lineTo(peak[0], peak[1]);
             });
           }, this.dataStyle.mountain.lineColor);
@@ -315,10 +342,10 @@ export default class Render {
           }, gradient);
       }
     }
-
   }
 
   drawSubSeries() {
+    return
     if (this.dataSource.timeRanges) {
       this.dataSource.series.forEach(series => {
         LinearIndicatorPainter[series.type] && LinearIndicatorPainter[series.type].call(this, this.ctx, {
@@ -502,8 +529,7 @@ export default class Render {
 
     // draw current price
     if (this.dataSource.data.length > 0){
-      if (this.dataSource.series[0].type === 'candlestick' ||
-          this.dataSource.series[0].type === 'linear'){
+      if (this.dataSource.series[0].main){
 
         const x = this.style.axis.yAxisPos === 'right' ? this.style.position.right : 0;
         const width = this.style.axis.yAxisPos === 'right' ? this.style.padding.right : this.style.padding.left;

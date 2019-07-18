@@ -65,7 +65,7 @@ const DEFAULTS = function(){
     dataStyle: {    // 关于数据的样式
       baseValue: '#2DB0F9',    // 分时图昨收的颜色
       candlestick: {    // K线图的颜色
-        block: {up: '#f8f8f8', down: '#1EB955'},    // 蜡烛块的颜色
+        block: {up: '#FF4040', down: '#1EB955'},    // 蜡烛块的颜色
         border: {up: '#FF4040', down: '#1EB955'},    // 蜡烛边框颜色
         wick: {up: '#FF4040', down: '#1EB955'}    // 蜡烛烛心颜色
       },
@@ -77,6 +77,10 @@ const DEFAULTS = function(){
         lineColor: '#2DB0F9',    // 价格线的颜色
         gradientUp: 'rgba(45,176,249,0.15)',    // 山形内部渐变色
         gradientDown: 'rgba(19,119,240,0.02)'
+      },
+      column: {
+        block: {up: '#FF4040', down: '#1EB955'},    // 蜡烛块的颜色
+        border: {up: '#FF4040', down: '#1EB955'},
       }
     }
   }

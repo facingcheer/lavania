@@ -392,13 +392,21 @@ const Utils = {
       return points[points.length - 1];
     },
 
+    halfcandleWidth(columnWidth) {
+      let half = ~~((columnWidth - 3) / 2);
+      let sixtyPercent = ~~(columnWidth * 0.3);
+      half = Math.min(sixtyPercent, half);
+      if (half < 1) half = 1;
+      return half;
+    },
+
     calcYRange(data, series) {
       var yMax = Number.MIN_VALUE;
       var yMin = Number.MAX_VALUE;
       data.forEach(d => {
         series.forEach(s => {
-          var h = d[s.type === 'candlestick' ? s.h : s.valIndex];
-          var l = d[s.type === 'candlestick' ? s.l : s.valIndex];
+          var h = d[s.type === 'candlestick' || s.type === 'OHLC' ? s.h : s.valIndex];
+          var l = d[s.type === 'candlestick' || s.type === 'OHLC' ? s.l : s.valIndex];
           if (h > yMax) yMax = h;
           if (l < yMin) yMin = l;
         });
@@ -605,7 +613,7 @@ const DEFAULTS = function () {
       candlestick: {
         // K线图的颜色
         block: {
-          up: '#f8f8f8',
+          up: '#FF4040',
           down: '#1EB955'
         },
         // 蜡烛块的颜色
@@ -634,6 +642,17 @@ const DEFAULTS = function () {
         gradientUp: 'rgba(45,176,249,0.15)',
         // 山形内部渐变色
         gradientDown: 'rgba(19,119,240,0.02)'
+      },
+      column: {
+        block: {
+          up: '#FF4040',
+          down: '#1EB955'
+        },
+        // 蜡烛块的颜色
+        border: {
+          up: '#FF4040',
+          down: '#1EB955'
+        }
       }
     }
   };
@@ -684,6 +703,155 @@ const Draw = {
     ctx.restore();
   }
 
+};
+
+function linePainter (ctx, data, coord, seriesConf, decorators) {
+  const points = [];
+  data.forEach(item => {
+    points.push({
+      x: item.x,
+      y: Utils.Coord.linearActual2Display(item[seriesConf.valIndex], coord.y)
+    });
+  });
+  Draw.Stroke(ctx, ctx => {
+    ctx.lineWidth = seriesConf.lineWidth || 1;
+    points.forEach((point, index) => {
+      if (!index) ctx.moveTo(point.x, point.y);
+      ctx.lineTo(point.x, point.y);
+    });
+  }, seriesConf.color);
+
+  if (decorators && decorators.length) {
+    decorators.forEach(d => {
+      if (typeof d === 'function') {
+        d(points, seriesConf);
+      }
+    });
+  }
+}
+
+const calcOHLC = (data, coord, seriesConf) => {
+  const res = {
+    up: [],
+    down: []
+  };
+  data.forEach((item, index) => {
+    const o = ~~Utils.Coord.linearActual2Display(item[seriesConf.o], coord.y);
+    const c = ~~Utils.Coord.linearActual2Display(item[seriesConf.c], coord.y);
+    const h = ~~Utils.Coord.linearActual2Display(item[seriesConf.h], coord.y);
+    const l = ~~Utils.Coord.linearActual2Display(item[seriesConf.l], coord.y);
+    const direction = c === o && index > 0 ? data[index - 1][seriesConf.c] < item[seriesConf.c] ? 'up' : 'down' : c < o ? 'up' : 'down';
+    res[direction].push({
+      x: ~~item.x,
+      low: l,
+      high: h,
+      close: c,
+      open: o
+    });
+  });
+  return res;
+};
+
+function drawWicks(ctx, candles, wickColor) {
+  for (var direction in candles) {
+    Draw.Stroke(ctx, ctx => {
+      candles[direction].forEach(line => {
+        ctx.moveTo(line.x + 0.5, line.low + 0.5);
+        ctx.lineTo(line.x + 0.5, line.high + 0.5);
+      });
+    }, wickColor[direction]);
+  }
+}
+
+function drawCandle(ctx, candles, columnWidth, blockColor, borderColor) {
+  let half = Utils.Coord.halfcandleWidth(columnWidth);
+
+  for (let direction in candles) {
+    Draw.FillnStroke(ctx, ctx => {
+      candles[direction].forEach(candle => {
+        ctx.rect(~~(candle.x - half) + 0.5, ~~Math.min(candle.open, candle.close) + 0.5, half * 2, ~~Math.abs(candle.open - candle.close)); // + 0.02 is for IE fix
+      });
+    }, blockColor[direction], borderColor[direction]);
+  }
+}
+
+function candlestickPainter (ctx, data, coord, seriesConf) {
+  const candles = calcOHLC(data, coord, seriesConf);
+  drawWicks(ctx, candles, seriesConf.style.candlestick.wick);
+  drawCandle(ctx, candles, coord.viewport.width, seriesConf.style.candlestick.block, seriesConf.style.candlestick.border);
+}
+
+function drawOHLC(ctx, OHLC, columnWidth, ohlcColor) {
+  let half = Utils.Coord.halfcandleWidth(columnWidth);
+  let lineWidth = ~~(columnWidth / 10);
+  if (lineWidth > 1) lineWidth += ctx.lineWidth % 2 ? 0 : 1;
+
+  for (let direction in OHLC) {
+    Draw.Stroke(ctx, ctx => {
+      ctx.lineWidth = lineWidth;
+      OHLC[direction].forEach(ohlc => {
+        ctx.moveTo(ohlc.x + 0.5, ohlc.low);
+        ctx.lineTo(ohlc.x + 0.5, ohlc.high);
+        ctx.moveTo(~~(ohlc.x - half) + 0.5, ohlc.open);
+        ctx.lineTo(ohlc.x, ohlc.open);
+        ctx.moveTo(~~(ohlc.x + half) + 0.5, ohlc.close);
+        ctx.lineTo(ohlc.x, ohlc.close); // ctx.rect(~~(ochl.x - half) + 0.5 , ~~Math.min(candle.open, candle.close) + 0.5, half * 2 ,~~Math.abs(candle.open - candle.close)) // + 0.02 is for IE fix
+      });
+    }, ohlcColor[direction]);
+  }
+}
+
+function ohlcPainter (ctx, data, coord, seriesConf) {
+  const OHLC = calcOHLC(data, coord, seriesConf);
+  console.log('OHLC', coord);
+  drawOHLC(ctx, OHLC, coord.viewport.width, seriesConf.style.OHLC);
+}
+
+function columnPainter (ctx, data, coord, seriesConf, bottom) {
+  let columns = {
+    up: [],
+    down: [],
+    eq: []
+  };
+  data.forEach((item, index) => {
+    var val = item[seriesConf.valIndex];
+    var baseVal = seriesConf.baseVal !== undefined ? seriesConf.baseVal : seriesConf.baseIndex !== undefined ? item[seriesConf.baseIndex] : null;
+    if (baseVal !== null) columns[val >= baseVal ? 'up' : 'down'].push(item);
+    if (seriesConf.detect) columns[seriesConf.detect(item, index, data)].push(item);
+  }); // a股K线下面的图换成矩形画法
+
+  var coordY = seriesConf.linearMode ? {
+    actual: [0, coord.y.actual[1]],
+    display: coord.y.display
+  } : coord.y;
+  console.log('columns', columns, coordY);
+
+  for (var direction in columns) {
+    Draw.FillnStroke(ctx, ctx => {
+      columns[direction].forEach(item => {
+        if (seriesConf.mode === 'bidirection') {
+          ctx.rect(~~(item.x - (coord.viewport.width - 4) / 2) + 0.5, ~~Utils.Coord.linearActual2Display(seriesConf.baseVal, coordY) + 0.5, coord.viewport.width - 4, ~~(Utils.Coord.linearActual2Display(item[seriesConf.valIndex], coordY) - Utils.Coord.linearActual2Display(seriesConf.baseVal, coordY)) + 0.02); // + 0.02 is for IE fix
+        } else {
+          ctx.rect(~~(item.x - (coord.viewport.width - 4) / 2) + 0.5, ~~coordY.display[0] + 0.5, coord.viewport.width - 4, ~~(Utils.Coord.linearActual2Display(item[seriesConf.valIndex], coordY) - ~~coordY.display[0]) + 0.02); // + 0.02 is for IE fix
+          // ctx.rect(~~(item.x - (coord.viewport.width - 4) / 2) + 0.5,
+          // ~~coord.y.display[1] + 0.5,
+          // coord.viewport.width - 4,
+          // ~~(Utils.Coord.linearActual2Display(item[seriesConf.valIndex], coordY) -
+          // ~~coord.y.display[1]) + 0.02) // + 0.02 is for IE fix
+        }
+      });
+    }, seriesConf.style.column.block[direction], seriesConf.style.column.border[direction]);
+  }
+}
+
+function panesColumnPainter () {}
+
+var Painter = {
+  line: linePainter,
+  candlestick: candlestickPainter,
+  OHLC: ohlcPainter,
+  column: columnPainter,
+  panesColumn: panesColumnPainter
 };
 
 const LinearIndicatorPainter = {
@@ -864,11 +1032,13 @@ class Render {
       style,
       filterData,
       pricePrecision
-    } = this; // calculate actual range of data
+    } = this; // calculate actual-x-range of data
 
-    let yRange = Utils.Coord.calcYRange(filterData.data, series);
-    let yActual = Utils.Coord.adjustYRange(yRange, touchTop, style, baseValue, pricePrecision);
-    let xActual = [filterData.data[0][timeIndex], filterData.data[filterData.data.length - 1][timeIndex]]; // create coord
+    let xActual = [filterData.data[0][timeIndex], filterData.data[filterData.data.length - 1][timeIndex]]; // calculate actual range of data
+
+    let yRange = Utils.Coord.calcYRange(filterData.data, series); // yRange的初步处理，有baseValue时对称处理，最大最小值相等时增加差异
+
+    let yActual = Utils.Coord.adjustYRange(yRange, touchTop, style, baseValue, pricePrecision); // create coord
 
     this.coord = {
       x: {
@@ -881,6 +1051,8 @@ class Render {
       },
       viewport
     };
+    this.render.genHorizLines.call(this);
+    this.render.genVerticalLines.call(this);
   }
 
   genHorizLines() {
@@ -889,12 +1061,17 @@ class Render {
       style
     } = this;
     const {
-      baseValue
+      baseValue,
+      touchTop
     } = this.dataSource;
     let yActual = coord.y.actual;
     let horizCount = Utils.Grid.lineCount(coord.y.display, style.grid.limit.y, style.grid.span.y);
     let hGridLines = Utils.Grid.calcGridLines(coord.y.actual, horizCount, baseValue);
-    coord.y.actual = [hGridLines[0], hGridLines[hGridLines.length - 1]];
+
+    if (!touchTop) {
+      coord.y.actual = [hGridLines[0], hGridLines[hGridLines.length - 1]];
+    }
+
     let horizLines = hGridLines.map(val => {
       return {
         actual: val,
@@ -941,35 +1118,58 @@ class Render {
     const {
       coord,
       style
-    } = this;
+    } = this; // draw horizontal lines
+
+    if (coord.horizLines) {
+      Draw.Stroke(this.ctx, ctx => {
+        coord.horizLines.forEach((y, index) => {
+          ctx.moveTo(style.padding.left, y.display);
+          ctx.lineTo(style.position.right, y.display);
+        });
+      }, style.grid.color.x);
+    } // draw vertical lines
+
+
+    if (coord.verticalLines) {
+      Draw.Stroke(this.ctx, ctx => {
+        coord.verticalLines.forEach((val, ind) => {
+          ctx.moveTo(val.display, style.padding.top);
+          ctx.lineTo(val.display, style.position.bottom);
+        });
+      }, style.grid.color.y);
+    }
+  }
+
+  drawSeries() {
     const {
-      baseValue,
-      timeRanges
+      series,
+      valueIndex
     } = this.dataSource;
-    this.render.genHorizLines.call(this);
-    this.render.genVerticalLines.call(this); // draw horizontal lines
+    const {
+      coord
+    } = this;
+    series.map(s => {
+      if (s.type === 'line' || s.type === 'candlestick' || s.type === 'OHLC') {
+        Painter[s.type](this.ctx, this.filterData.data, coord, s);
+      }
 
-    Draw.Stroke(this.ctx, ctx => {
-      coord.horizLines.forEach((y, index) => {
-        ctx.moveTo(this.style.padding.left, y.display);
-        ctx.lineTo(this.style.position.right, y.display);
-      });
-    }, this.style.grid.color.x); // calculate vertical lines position
-    // draw vertical lines
+      if (s.type === 'column') {
+        if (this.dataSource.timeRanges) {
+          Painter.panesColumn(this.ctx, this.panes, coord, s);
+        }
 
-    Draw.Stroke(this.ctx, ctx => {
-      coord.verticalLines.forEach((val, ind) => {
-        ctx.moveTo(val.display, style.padding.top);
-        ctx.lineTo(val.display, style.position.bottom);
-      });
-    }, style.grid.color.y);
+        if (!this.dataSource.timeRanges) {
+          Painter.column(this.ctx, this.filterData.data, coord, s, this.style.position.bottom);
+        }
+      }
+    });
   }
 
   drawMainSeries() {
     // draw the first series as main series
     var mainSeries = this.dataSource.series[0];
 
-    if (mainSeries.type === 'linear') {
+    if (mainSeries.type === 'line') {
       var points = []; // points position calculation
 
       this.panes.forEach((pane, index) => {
@@ -980,7 +1180,9 @@ class Render {
           panePoints.push([x, y]);
         });
         points.push(panePoints);
-      }); // use points position to draw line
+      });
+      console.log('points', points);
+      console.log(this.filterData.data); // use points position to draw line
       // loop panes then loop points in panes
 
       Draw.Stroke(this.ctx, ctx => {
@@ -1088,6 +1290,8 @@ class Render {
   }
 
   drawSubSeries() {
+    return;
+
     if (this.dataSource.timeRanges) {
       this.dataSource.series.forEach(series => {
         LinearIndicatorPainter[series.type] && LinearIndicatorPainter[series.type].call(this, this.ctx, { ...series,
@@ -1226,7 +1430,7 @@ class Render {
 
 
     if (this.dataSource.data.length > 0) {
-      if (this.dataSource.series[0].type === 'candlestick' || this.dataSource.series[0].type === 'linear') {
+      if (this.dataSource.series[0].main) {
         const x = this.style.axis.yAxisPos === 'right' ? this.style.position.right : 0;
         const width = this.style.axis.yAxisPos === 'right' ? this.style.padding.right : this.style.padding.left;
         const last = this.dataSource.data[this.dataSource.data.length - 1];
@@ -1358,15 +1562,16 @@ class Chart {
 
   genStyle() {
     this.ctx.font = this.style.font.size + 'px ' + this.style.font.family;
-    this.iaCtx.font = this.ctx.font; // this.style.padding.rightPos = this.originWidth - this.style.padding.right
-    // this.style.position.bottom = this.originHeight - this.style.padding.bottom
-
+    this.iaCtx.font = this.ctx.font;
     this.style.position = {
       left: this.style.padding.left,
       top: this.style.padding.top,
       right: this.originWidth - this.style.padding.right,
       bottom: this.originHeight - this.style.padding.bottom
     };
+    this.dataSource.series.map(s => {
+      s.style = s.style || this.dataStyle;
+    });
   }
 
   rerender(force) {
@@ -1381,21 +1586,16 @@ class Chart {
 
     if (this.dataSource.timeRanges) {
       this.render.genPanes.call(this);
-      this.render.genCoord.call(this);
-      this.render.drawGrid.call(this);
-      this.render.drawMainSeries.call(this);
-      this.render.drawSubSeries.call(this);
-      this.render.drawAxis.call(this);
-      this.render.drawAdditionalTips.call(this);
     } else {
       this.render.filterData.call(this);
-      this.render.genCoord.call(this);
-      this.render.drawGrid.call(this);
-      this.render.drawMainSeries.call(this);
-      this.render.drawSubSeries.call(this);
-      this.render.drawAxis.call(this);
-      this.render.drawAdditionalTips.call(this);
     }
+
+    this.render.genCoord.call(this);
+    this.render.drawGrid.call(this);
+    this.render.drawSeries.call(this); // this.render.drawMainSeries.call(this)
+    // this.render.drawSubSeries.call(this)
+    // this.render.drawAxis.call(this)
+    // this.render.drawAdditionalTips.call(this)
 
     this.state.ready = 1; // rerender all linked charts
 
