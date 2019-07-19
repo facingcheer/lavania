@@ -50,10 +50,10 @@
             series: [
               // {name: '分时图', type: 'line', valIndex: 2},
               // {name: 'K2线', type: 'candlestick', o: 1, c: 2, h: 3, l: 4},
-              {name: 'K线', type: 'OHLC', o: 1, c: 2, h: 3, l: 4, main:true},
+              {name: 'K线', type: 'candlestick', o: 1, c: 2, h: 3, l: 4, main:true},
 
               // {name: 'K线', type: 'candlestick', as: 'mountain', t: 0, o: 1, c: 2, h: 3, l: 4}, // 这句可以显示山型线
-              {name: '均线', type: 'line', valIndex: 9, color: 'teal', lineWidth: 1}
+              {name: '均线', type: 'mountain', valIndex: 9, color: 'teal', lineWidth: 1}
             ]
           },
           viewport: {
@@ -63,7 +63,7 @@
         };
 
         var chart = new Chart(document.getElementById('chart1'), pattern)
-        console.log(chart)
+        // console.log(chart)
 
 
         var pattern11 = {
@@ -100,9 +100,10 @@
           }
         }
         var chart11 = new Chart(document.getElementById('chart11'), pattern11)
-        chart11.style.axis.lineColor = 'transparent'
+        chart11.style.grid.color.x = 'transparent'
+        chart11.style.grid.color.y = 'transparent'
         chart11.rerender()
-        console.log(chart11)
+        // console.log(chart11)
 
 
         var pattern2 = {
@@ -128,8 +129,10 @@
                 //   // function provide for detect a value should be up or down
                 //   return item[2] >= pane[0][2] ? 'up' : 'down'
                 // }
-              }, baseIndex: 9, lineWidth: 5, mode:'bidirection'}
+              }, baseIndex: 9, lineWidth: 3, mode:'bidirection'}
             ],
+            // timeRanges: [[1479931200 * 1000, 1479970800 * 1000],
+            //               [1482148800 * 1000, 1482552000 * 1000]],
             timeRanges: [[1479931200 * 1000, 1479970800 * 1000],
                           [1482148800 * 1000, 1482552000 * 1000]],
             timeRangesRatio: [0.2, 0.8],
@@ -139,40 +142,44 @@
 
         var chart2= new Chart(document.getElementById('chart2'), pattern2)
 
-        // var pattern3 = {
-        //   dataSource: {
-        //     // touchTop: true,
-        //     data: window.fake_data,
-        //     timeIndex: 0,
-        //     series: [
-        //       // {name: '均线', type: 'line', t: 0, valIndex: 9, color: 'orange', lineWidth: 1},
+        var pattern3 = {
+          dataSource: {
+            touchTop: true,
+            data: window.fake_data,
+            timeIndex: 0,
+            series: [
+              // {name: '均线', type: 'line', t: 0, valIndex: 9, color: 'orange', lineWidth: 1},
 
-        //       // column can use baseVal or baseIndex to detect a value(it's a array) should be up or down
-        //       // all value will compare with baseValue if provided
-        //       // if no baseVal is provide, baseIndex for inner compare
-        //       // example for baseIndex : data Like [1480464000000, 1.0647, 1.0648, 1.066, 1.0646, 0.001, 0.001, 0.001, 1.0648, 1.0640399999999999], 1.0647 stand for opening-price & 1.0648 stand for close-price
-        //       // we can set valIndex as 2 and  the baseIndex as 1, so each data will compare it's close with it's opening
-        //       // if all the set not good enough you can use detect function to define it your self
-        //       {name: '均线', type: 'column', valIndex: 2, color:
-        //       {
-        //         up: '#FF4040',
-        //         down: '#1EB955',
-        //         // detect(item, index, pane, paneIndex, panes) {
-        //         //   // function provide for detect a value should be up or down
-        //         //   return item[2] >= pane[0][2] ? 'up' : 'down'
-        //         // }
-        //       }, baseVal: 1.06, lineWidth: 5, mode:'bidirection'}
-        //     ],
-        //     timeRanges: [[1479931200 * 1000, 1479970800 * 1000],
-        //                   [1482148800 * 1000, 1482552000 * 1000]],
-        //     timeRangesRatio: [0.2, 0.8],
-        //     baseValue: 1.06
-        //   }
-        // };
-        // var chart3 = new Chart(document.getElementById('chart3'), pattern3)
-        // // chart3.style.axis.lineColor = 'transparent'
-        // // chart3.rerender()
-        // console.log(chart3)
+              // column can use baseVal or baseIndex to detect a value(it's a array) should be up or down
+              // all value will compare with baseValue if provided
+              // if no baseVal is provide, baseIndex for inner compare
+              // example for baseIndex : data Like [1480464000000, 1.0647, 1.0648, 1.066, 1.0646, 0.001, 0.001, 0.001, 1.0648, 1.0640399999999999], 1.0647 stand for opening-price & 1.0648 stand for close-price
+              // we can set valIndex as 2 and  the baseIndex as 1, so each data will compare it's close with it's opening
+              // if all the set not good enough you can use detect function to define it your self
+              {name: '均线', type: 'column', valIndex: 2, color:
+              {
+                up: '#FF4040',
+                down: '#1EB955',
+                // detect(item, index, pane, paneIndex, panes) {
+                //   // function provide for detect a value should be up or down
+                //   return item[2] >= pane[0][2] ? 'up' : 'down'
+                // }
+              }, baseVal: 1.044,
+              lineWidth: 3,
+              mode:'bidirection'}
+            ],
+            // timeRanges: [[1479931200 * 1000, 1479970800 * 1000],
+            //               [1482148800 * 1000, 1482552000 * 1000]],
+            timeRanges: [[1479931200 * 1000, 1479970800 * 1000],
+                          [1482148800 * 1000, 1482552000 * 1000]],
+            timeRangesRatio: [0.2, 0.8],
+            baseValue: 1.06
+          }
+        };
+        var chart3 = new Chart(document.getElementById('chart3'), pattern3)
+        // chart3.style.axis.lineColor = 'transparent'
+        // chart3.rerender()
+        console.log(chart3)
     })()
     </script>
   </body>

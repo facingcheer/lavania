@@ -114,9 +114,7 @@ class Chart {
     this.render.genCoord.call(this)
     this.render.drawGrid.call(this)
     this.render.drawSeries.call(this)
-    // this.render.drawMainSeries.call(this)
-    // this.render.drawSubSeries.call(this)
-    // this.render.drawAxis.call(this)
+    this.render.drawAxis.call(this)
     // this.render.drawAdditionalTips.call(this)
 
     this.state.ready = 1

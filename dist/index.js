@@ -581,6 +581,8 @@ const DEFAULTS = function () {
         // 隐藏蜡烛图的日期
         hideCandlestickTime: false,
         // 隐藏蜡烛图的小时分钟
+        hideBorder: false,
+        // 显示图表border
         showRate: false,
         // 显示百分比
         labelPos: {
@@ -596,13 +598,13 @@ const DEFAULTS = function () {
         },
         labelColor: '#555',
         // 设定坐标轴标签的颜色
-        pointerLength: 0,
+        scaleLength: 10,
         // 刻度长度
         bgColor: 'rgba(0,0,0,0)',
         // 坐标轴背景色
-        lineColor: 'rgba(0,0,0,0)',
+        lineColor: 'rgba(0,0,0,1)',
         // 坐标轴线颜色
-        drawFrame: false // 是否绘制线框
+        showBorder: true // 是否绘制线框
 
       }
     },
@@ -824,15 +826,15 @@ function columnPainter (ctx, data, coord, seriesConf, bottom) {
     actual: [0, coord.y.actual[1]],
     display: coord.y.display
   } : coord.y;
-  console.log('columns', columns, coordY);
+  const half = Utils.Coord.halfcandleWidth(coord.viewport.width);
 
   for (var direction in columns) {
     Draw.FillnStroke(ctx, ctx => {
       columns[direction].forEach(item => {
         if (seriesConf.mode === 'bidirection') {
-          ctx.rect(~~(item.x - (coord.viewport.width - 4) / 2) + 0.5, ~~Utils.Coord.linearActual2Display(seriesConf.baseVal, coordY) + 0.5, coord.viewport.width - 4, ~~(Utils.Coord.linearActual2Display(item[seriesConf.valIndex], coordY) - Utils.Coord.linearActual2Display(seriesConf.baseVal, coordY)) + 0.02); // + 0.02 is for IE fix
+          ctx.rect(~~(item.x - half) + 0.5, ~~Utils.Coord.linearActual2Display(seriesConf.baseVal, coordY) + 0.5, half * 2, ~~(Utils.Coord.linearActual2Display(item[seriesConf.valIndex], coordY) - Utils.Coord.linearActual2Display(seriesConf.baseVal, coordY)) + 0.02); // + 0.02 is for IE fix
         } else {
-          ctx.rect(~~(item.x - (coord.viewport.width - 4) / 2) + 0.5, ~~coordY.display[0] + 0.5, coord.viewport.width - 4, ~~(Utils.Coord.linearActual2Display(item[seriesConf.valIndex], coordY) - ~~coordY.display[0]) + 0.02); // + 0.02 is for IE fix
+          ctx.rect(~~(item.x - half) + 0.5, ~~coordY.display[0] + 0.5, half * 2, ~~(Utils.Coord.linearActual2Display(item[seriesConf.valIndex], coordY) - ~~coordY.display[0]) + 0.02); // + 0.02 is for IE fix
           // ctx.rect(~~(item.x - (coord.viewport.width - 4) / 2) + 0.5,
           // ~~coord.y.display[1] + 0.5,
           // coord.viewport.width - 4,
@@ -844,114 +846,76 @@ function columnPainter (ctx, data, coord, seriesConf, bottom) {
   }
 }
 
-function panesColumnPainter () {}
+function panesColumnPainter (ctx, panes, coord, seriesConf, bottom) {
+  const columns = {
+    up: [],
+    down: [],
+    eq: []
+  };
+  panes.forEach((pane, paneIndex) => {
+    pane.paneData.forEach((item, bIndex) => {
+      let val = item[seriesConf.valIndex];
+      if (!bIndex) item.isFirst = true;
+      if (bIndex === pane.paneData.length - 1 && paneIndex !== panes.length - 1) item.isLast = true; // make some changes to base define
+
+      var baseVal = seriesConf.baseVal !== undefined ? seriesConf.baseVal : seriesConf.baseIndex !== undefined ? item[seriesConf.baseIndex] : null;
+      if (baseVal !== null) columns[val >= baseVal ? 'up' : 'down'].push(item);
+      if (seriesConf.color.detect) columns[seriesConf.color.detect(item, bIndex, pane.paneData, paneIndex, panes)].push(item);
+    });
+  });
+
+  for (let direction in columns) {
+    Draw.FillnStroke(ctx, ctx => {
+      columns[direction].forEach(item => {
+        let half = seriesConf.lineWidth / 2 || 1;
+
+        if (item.x + half > coord.x.display[1]) {
+          item.isLast = true;
+        }
+
+        if (item.isFirst || item.isLast) {
+          half = half / 2;
+        }
+
+        let posX = item.isFirst ? item.x : item.isLast ? item.x - half * 2 : item.x - half;
+        let baseVal = seriesConf.baseVal !== undefined ? seriesConf.baseVal : seriesConf.baseIndex !== undefined ? item[seriesConf.baseIndex] : null;
+
+        if (seriesConf.mode === 'bidirection') {
+          ctx.rect(~~posX + 0.5, ~~Utils.Coord.linearActual2Display(baseVal, coord.y) + 0.5, half * 2, ~~Utils.Coord.linearActual2Display(item[seriesConf.valIndex], coord.y) - ~~Utils.Coord.linearActual2Display(baseVal, coord.y) + 0.02);
+        } else {
+          ctx.rect(~~posX + 0.5, ~~seriesConf.bottom ? seriesConf.bottom + 0.5 : 0.5, half * 2, ~~Utils.Coord.linearActual2Display(item[seriesConf.valIndex], coord.y) - ~~Utils.Coord.linearActual2Display(baseVal, coord.y) + 0.02);
+        }
+      });
+    }, seriesConf.color[direction], seriesConf.color[direction]);
+  }
+}
+
+function mountainPainter (ctx, data, coord, seriesConf) {
+  const decorators = [];
+  decorators.push(function gradientDecorator(points, seriesConf) {
+    // draw gradient
+    var gradient = ctx.createLinearGradient(0, 0, 0, coord.y.display[0] - coord.y.display[1]);
+    gradient.addColorStop(0, seriesConf.style.mountain.gradientUp);
+    gradient.addColorStop(1, seriesConf.style.mountain.gradientDown);
+    Draw.Fill(ctx, ctx => {
+      ctx.moveTo(points[0].x, coord.y.display[0]);
+      points.forEach((point, index) => {
+        ctx.lineTo(point.x, point.y);
+      });
+      ctx.lineTo(points[points.length - 1].x, coord.y.display[0]);
+      ctx.closePath();
+    }, gradient);
+  });
+  return linePainter(ctx, data, coord, seriesConf, decorators);
+}
 
 var Painter = {
   line: linePainter,
   candlestick: candlestickPainter,
   OHLC: ohlcPainter,
   column: columnPainter,
-  panesColumn: panesColumnPainter
-};
-
-const LinearIndicatorPainter = {
-  line(ctx, seriesConf, panes, coord) {
-    Draw.Stroke(ctx, ctx => {
-      ctx.lineWidth = seriesConf.lineWidth || 1;
-      panes.forEach((pane, index) => {
-        pane.paneData.forEach((item, bIndex) => {
-          if (!bIndex) ctx.moveTo(Utils.Coord.linearActual2Display(item[seriesConf.t], pane.paneView.x), Utils.Coord.linearActual2Display(item[seriesConf.valIndex], coord.y));
-          ctx.lineTo(Utils.Coord.linearActual2Display(item[seriesConf.t], pane.paneView.x), Utils.Coord.linearActual2Display(item[seriesConf.valIndex], coord.y));
-        });
-      });
-    }, seriesConf.color);
-  },
-
-  column(ctx, seriesConf, panes, coord) {
-    var columns = {
-      up: [],
-      down: [],
-      eq: []
-    };
-    panes.forEach((pane, paneIndex) => {
-      pane.paneData.forEach((item, bIndex) => {
-        var val = item[seriesConf.valIndex]; // make some changes to base define
-
-        var baseVal = seriesConf.baseVal !== undefined ? seriesConf.baseVal : seriesConf.baseIndex !== undefined ? item[seriesConf.baseIndex] : null;
-        if (baseVal !== null) columns[val >= baseVal ? 'up' : 'down'].push(item);
-        if (seriesConf.color.detect) columns[seriesConf.color.detect(item, bIndex, pane.paneData, paneIndex, panes)].push(item);
-      });
-    });
-
-    for (var direction in columns) {
-      Draw.Stroke(ctx, ctx => {
-        ctx.lineWidth = seriesConf.lineWidth || 1;
-        columns[direction].forEach(item => {
-          var baseVal = seriesConf.baseVal !== undefined ? seriesConf.baseVal : seriesConf.baseIndex !== undefined ? item[seriesConf.baseIndex] : null;
-
-          if (seriesConf.mode === 'bidirection') {
-            ctx.moveTo(~~item.x + 0.5, Utils.Coord.linearActual2Display(baseVal, coord.y));
-            ctx.lineTo(~~item.x + 0.5, Utils.Coord.linearActual2Display(item[seriesConf.valIndex], coord.y));
-          } else {
-            ctx.moveTo(~~item.x + 0.5, seriesConf.bottom || 0);
-            ctx.lineTo(~~item.x + 0.5, Utils.Coord.linearActual2Display(item[seriesConf.valIndex], coord.y));
-          }
-        });
-      }, seriesConf.color[direction]);
-    }
-  }
-
-};
-const CandleStickIndicatorPainter = {
-  line(ctx, seriesConf, filteredData, coord) {
-    Draw.Stroke(ctx, ctx => {
-      ctx.lineWidth = seriesConf.line_width || 1;
-      var started = false;
-      filteredData.forEach((item, index) => {
-        var val = item[seriesConf.valIndex];
-        if (val === null) return;
-
-        if (!started) {
-          ctx.moveTo(item.x, Utils.Coord.linearActual2Display(val, coord.y));
-          started = true;
-        }
-
-        ctx.lineTo(item.x, Utils.Coord.linearActual2Display(val, coord.y));
-      });
-    }, seriesConf.color);
-  },
-
-  column(ctx, seriesConf, filteredData, coord) {
-    var columns = {
-      up: [],
-      down: [],
-      eq: []
-    };
-    filteredData.forEach((item, index) => {
-      var val = item[seriesConf.valIndex];
-      var baseVal = seriesConf.baseVal !== undefined ? seriesConf.baseVal : seriesConf.baseIndex !== undefined ? item[seriesConf.baseIndex] : null;
-      if (baseVal !== null) columns[val >= baseVal ? 'up' : 'down'].push(item);
-      if (seriesConf.color.detect) columns[seriesConf.color.detect(item, index, filteredData)].push(item);
-    }); // a股K线下面的图换成矩形画法
-
-    var coordY = seriesConf.linearMode ? {
-      actual: [0, coord.y.actual[1]],
-      display: coord.y.display
-    } : coord.y;
-
-    for (var direction in columns) {
-      Draw.FillnStroke(ctx, ctx => {
-        columns[direction].forEach(item => {
-          if (seriesConf.mode === 'bidirection') {
-            ctx.rect(~~(item.x - (seriesConf.viewport.width - 4) / 2) + 0.5, ~~Utils.Coord.linearActual2Display(seriesConf.baseVal, coordY) + 0.5, seriesConf.viewport.width - 4, ~~(Utils.Coord.linearActual2Display(item[seriesConf.valIndex], coordY) - Utils.Coord.linearActual2Display(seriesConf.baseVal, coordY)) + 0.02); // + 0.02 is for IE fix
-          } else {
-            ctx.rect(~~(item.x - (seriesConf.viewport.width - 4) / 2) + 0.5, ~~seriesConf.position.bottom + 0.5, seriesConf.viewport.width - 4, ~~(Utils.Coord.linearActual2Display(item[seriesConf.valIndex], coordY) - seriesConf.position.bottom) + 0.02); // + 0.02 is for IE fix
-          }
-        });
-      }, seriesConf.color[direction], seriesConf.border ? seriesConf.border[direction] : seriesConf.color[direction]);
-    }
-  }
-
+  panesColumn: panesColumnPainter,
+  mountain: mountainPainter
 };
 
 class Render {
@@ -1120,19 +1084,22 @@ class Render {
       style
     } = this; // draw horizontal lines
 
+    const hLines = style.axis.hideBorder ? coord.horizLines.slice(1, -1) : coord.horizLines;
+
     if (coord.horizLines) {
       Draw.Stroke(this.ctx, ctx => {
-        coord.horizLines.forEach((y, index) => {
+        hLines.forEach((y, index) => {
           ctx.moveTo(style.padding.left, y.display);
           ctx.lineTo(style.position.right, y.display);
         });
       }, style.grid.color.x);
-    } // draw vertical lines
+    }
 
+    const vLines = style.axis.hideBorder ? coord.verticalLines.slice(1, -1) : coord.verticalLines; // draw vertical lines
 
     if (coord.verticalLines) {
       Draw.Stroke(this.ctx, ctx => {
-        coord.verticalLines.forEach((val, ind) => {
+        vLines.forEach((val, ind) => {
           ctx.moveTo(val.display, style.padding.top);
           ctx.lineTo(val.display, style.position.bottom);
         });
@@ -1149,7 +1116,7 @@ class Render {
       coord
     } = this;
     series.map(s => {
-      if (s.type === 'line' || s.type === 'candlestick' || s.type === 'OHLC') {
+      if (s.type === 'line' || s.type === 'mountain' || s.type === 'candlestick' || s.type === 'OHLC') {
         Painter[s.type](this.ctx, this.filterData.data, coord, s);
       }
 
@@ -1165,190 +1132,55 @@ class Render {
     });
   }
 
-  drawMainSeries() {
-    // draw the first series as main series
-    var mainSeries = this.dataSource.series[0];
-
-    if (mainSeries.type === 'line') {
-      var points = []; // points position calculation
-
-      this.panes.forEach((pane, index) => {
-        var panePoints = [];
-        pane.paneData.forEach(item => {
-          var x = item.x;
-          var y = ~~Utils.Coord.linearActual2Display(item[mainSeries.valIndex], this.coord.y);
-          panePoints.push([x, y]);
-        });
-        points.push(panePoints);
-      });
-      console.log('points', points);
-      console.log(this.filterData.data); // use points position to draw line
-      // loop panes then loop points in panes
-
-      Draw.Stroke(this.ctx, ctx => {
-        ctx.lineWidth = this.dataStyle.mountain.lineWidth;
-        points.forEach(panePoints => {
-          panePoints.forEach((point, index) => {
-            if (!index) ctx.moveTo(point[0], point[1]);
-            ctx.lineTo(point[0], point[1]);
-          });
-        });
-      }, this.dataStyle.mountain.lineColor); // draw gradient
-
-      var gradient = this.ctx.createLinearGradient(0, 0, 0, this.style.position.bottom - this.style.padding.top);
-      gradient.addColorStop(0, this.dataStyle.mountain.gradientUp);
-      gradient.addColorStop(1, this.dataStyle.mountain.gradientDown);
-      points.forEach(panePoints => {
-        if (panePoints.length) Draw.Fill(this.ctx, ctx => {
-          ctx.moveTo(panePoints[0][0], this.style.position.bottom);
-          panePoints.forEach((point, index) => {
-            ctx.lineTo(point[0], point[1]);
-          });
-          ctx.lineTo(panePoints[panePoints.length - 1][0], this.style.position.bottom);
-          ctx.closePath();
-        }, gradient);
-      });
-    } else {
-      var series = this.dataSource.series[0];
-      var lines = {
-        up: [],
-        down: []
-      };
-      var boxes = {
-        up: [],
-        down: []
-      };
-      var peaks = [];
-      if (series.type !== 'candlestick') return;
-      const data = this.filterData.data;
-      data.forEach((item, index) => {
-        var h = ~~Utils.Coord.linearActual2Display(item[series.h], this.coord.y);
-        var o = ~~Utils.Coord.linearActual2Display(item[series.o], this.coord.y);
-        var c = ~~Utils.Coord.linearActual2Display(item[series.c], this.coord.y);
-        var l = ~~Utils.Coord.linearActual2Display(item[series.l], this.coord.y);
-        var direction = c === o && index > 0 ? data[index - 1][series.c] < item[series.c] ? 'up' : 'down' : c < o ? 'up' : 'down';
-        lines[direction].push([~~item.x, l, h]);
-        var w = this.viewport.width - 2;
-        boxes[direction].push([item.x - w / 2 + 1, o > c ? c : o, w - 2, Math.abs(o - c), o, c, ~~item.x]);
-        peaks.push([~~item.x, c]);
-      });
-
-      for (var direction in lines) {
-        if (series.as === 'OHLC') Draw.Stroke(this.ctx, ctx => {
-          ctx.lineWidth = ~~(this.viewport.width / 10);
-          if (ctx.lineWidth > 1) ctx.lineWidth += ctx.lineWidth % 2 ? 0 : 1;
-          lines[direction].forEach(line => {
-            ctx.moveTo(line[0] + 0.5, line[1]);
-            ctx.lineTo(line[0] + 0.5, line[2]);
-          });
-        }, this.dataStyle.OHLC[direction]);else if (series.as === 'mountain') ; else Draw.Stroke(this.ctx, ctx => {
-          lines[direction].forEach(line => {
-            ctx.moveTo(line[0] + 0.5, line[1] + 0.5);
-            ctx.lineTo(line[0] + 0.5, line[2] + 0.5);
-          });
-        }, this.dataStyle.candlestick.wick[direction]);
-      }
-
-      for (var direction in boxes) {
-        if (series.as === 'OHLC') Draw.Stroke(this.ctx, ctx => {
-          boxes[direction].forEach(box => {
-            ctx.lineWidth = ~~(this.viewport.width / 10);
-            if (ctx.lineWidth > 1) ctx.lineWidth += ctx.lineWidth % 2 ? 0 : 1;
-            ctx.moveTo(box[0] + 1, box[4] + 0.5);
-            ctx.lineTo(box[6] + 1 + (ctx.lineWidth - 1) / 2, box[4] + 0.5);
-            ctx.moveTo(box[0] + box[2], box[5] + 0.5);
-            ctx.lineTo(box[6] - (ctx.lineWidth - 1) / 2, box[5] + 0.5);
-          });
-        }, this.dataStyle.OHLC[direction]);else if (series.as === 'mountain') ; else Draw.FillnStroke(this.ctx, ctx => {
-          boxes[direction].forEach(box => {
-            ctx.rect(~~box[0] + 0.5, box[1] + 0.5, box[2], box[3] + 0.02); // + 0.02 is for IE fix
-          });
-        }, this.dataStyle.candlestick.block[direction], this.dataStyle.candlestick.border[direction]);
-      }
-
-      if (series.as == 'mountain') {
-        Draw.Stroke(this.ctx, ctx => {
-          ctx.lineWidth = this.dataStyle.mountain.lineWidth;
-          peaks.forEach((peak, index) => {
-            if (!index) ctx.moveTo(peak[0], peak[1]);
-            ctx.lineTo(peak[0], peak[1]);
-          });
-        }, this.dataStyle.mountain.lineColor);
-        var gradient = this.ctx.createLinearGradient(0, 0, 0, this.style.position.bottom - this.style.padding.top);
-        gradient.addColorStop(0, this.dataStyle.mountain.gradientUp);
-        gradient.addColorStop(1, this.dataStyle.mountain.gradientDown);
-        Draw.Fill(this.ctx, ctx => {
-          ctx.moveTo(peaks[0][0], this.style.position.bottom);
-          peaks.forEach((peak, index) => {
-            ctx.lineTo(peak[0], peak[1]);
-          });
-          ctx.lineTo(peaks[peaks.length - 1][0], this.style.position.bottom);
-          ctx.closePath();
-        }, gradient);
-      }
-    }
-  }
-
-  drawSubSeries() {
-    return;
-
-    if (this.dataSource.timeRanges) {
-      this.dataSource.series.forEach(series => {
-        LinearIndicatorPainter[series.type] && LinearIndicatorPainter[series.type].call(this, this.ctx, { ...series,
-          bottom: this.style.position.bottom
-        }, this.panes, this.coord);
-      });
-    } else {
-      this.dataSource.series.forEach(series => {
-        CandleStickIndicatorPainter[series.type] && CandleStickIndicatorPainter[series.type].call(this, this.ctx, series, this.filterData.data, this.coord);
-      });
-    }
-  }
-
   drawAxis() {
-    // clear axis region
-    Draw.Fill(this.ctx, ctx => {
-      ctx.rect(0, 0, this.originWidth, this.style.padding.top);
-      ctx.rect(0, 0, this.style.padding.left, this.originHeight);
-      ctx.rect(this.style.position.right, 0, this.style.padding.right, this.originHeight);
-      ctx.rect(0, this.style.position.bottom, this.originWidth, this.style.padding.bottom);
-    }, this.style.axis.bgColor); // start position of the yAxis
+    const {
+      ctx,
+      style,
+      originHeight,
+      originWidth
+    } = this;
+    axisClean(this);
+    let yAxis = {};
+    let xAxis = {}; // flag用来标识刻度的朝向
 
-    const x = this.style.axis.yAxisPos === 'right' ? this.style.position.right : 0;
-    const y = this.style.axis.xAxisPos === 'bottom' ? this.style.position.bottom : this.style.padding.top;
-    var xLinePos = this.style.axis.yAxisPos === 'right' ? this.style.position.right : this.style.padding.left;
-    var xLinePosOp = this.style.axis.yAxisPos === 'right' ? this.style.padding.left : this.style.position.right;
-    var yOp = this.style.axis.xAxisPos === 'bottom' ? this.style.padding.top : this.style.position.bottom; // draw axis lines
+    yAxis.flag = style.axis.yAxisPos === 'right' ? 1 : -1;
+    xAxis.flag = style.axis.xAxisPos === 'bottom' ? 1 : -1; // start position of the aXis
+
+    yAxis.xStart = ~yAxis.flag ? style.position.right : 0;
+    xAxis.yStart = ~xAxis.flag ? style.position.bottom : style.padding.top;
+    yAxis.scaleStart = ~yAxis.flag ? style.position.right : style.padding.left; // draw axis lines
 
     Draw.Stroke(this.ctx, ctx => {
-      this.coord.horizLines.forEach(y => {
-        ctx.moveTo(xLinePos, y.display);
-        ctx.lineTo(xLinePos + this.style.axis.pointerLength * this.style.axis.yAxisPos, y.display);
+      this.coord.horizLines.forEach(hl => {
+        ctx.moveTo(yAxis.scaleStart, hl.display);
+        ctx.lineTo(yAxis.scaleStart + style.axis.scaleLength * yAxis.flag, hl.display);
       });
-      this.coord.verticalLines.forEach(x => {
-        ctx.moveTo(x.display, y);
-        ctx.lineTo(x.display, y + this.style.axis.pointerLength * this.style.axis.xAxisPos);
+      this.coord.verticalLines.forEach(vl => {
+        ctx.moveTo(vl.display, xAxis.yStart);
+        ctx.lineTo(vl.display, xAxis.yStart + this.style.axis.scaleLength * xAxis.flag);
       }); // draw axis line
 
-      ctx.moveTo(xLinePos + 0.5, this.style.padding.top);
-      ctx.lineTo(xLinePos + 0.5, this.style.position.bottom);
-      ctx.moveTo(this.style.padding.left, y + 0.5);
-      ctx.lineTo(this.style.position.right, y + 0.5);
+      ctx.moveTo(yAxis.scaleStart + 0.5, this.style.padding.top);
+      ctx.lineTo(yAxis.scaleStart + 0.5, this.style.position.bottom);
+      ctx.moveTo(style.padding.left, xAxis.yStart + 0.5);
+      ctx.lineTo(style.position.right, xAxis.yStart + 0.5);
 
-      if (this.style.axis.drawFrame) {
-        ctx.moveTo(xLinePosOp + 0.5, this.style.padding.top);
-        ctx.lineTo(xLinePosOp + 0.5, this.style.position.bottom);
-        ctx.moveTo(this.style.padding.left, yOp + 0.5);
-        ctx.lineTo(this.style.position.right, yOp + 0.5);
+      if (style.axis.showBorder) {
+        const xOp = ~yAxis.flag ? style.padding.left : style.position.right;
+        ctx.moveTo(xOp + 0.5, style.padding.top + 0.5);
+        ctx.lineTo(xOp + 0.5, style.position.bottom + 0.5);
+        const yOp = ~xAxis.flag ? style.padding.top : style.position.bottom;
+        ctx.moveTo(this.style.padding.left, yOp);
+        ctx.lineTo(this.style.position.right, yOp);
       }
 
       if (this.style.axis.showRate) {
-        var rateX = this.style.axis.yAxisPos > 0 ? this.style.padding.left : this.style.position.right;
+        var rateX = yAxis.flag > 0 ? this.style.padding.left : this.style.position.right;
         ctx.moveTo(rateX + 0.5, this.style.padding.top);
         ctx.lineTo(rateX + 0.5, this.style.position.bottom);
         this.coord.horizLines.forEach(y => {
           ctx.moveTo(rateX, y.display);
-          ctx.lineTo(rateX + this.style.axis.pointerLength * -this.style.axis.yAxisPos, y.display);
+          ctx.lineTo(rateX + this.style.axis.scaleLength * -yAxis.flag, y.display);
         });
       }
     }, this.style.axis.lineColor); // draw labels
@@ -1364,12 +1196,12 @@ class Render {
         var yPos = y.display + this.style.axis.labelPos.yAxis.y;
         if (yPos < 10) yPos += 10;
         if (yPos > this.originHeight - 10) yPos -= 10;
-        ctx.fillText(val, x + this.style.axis.pointerLength + xOffset, yPos);
+        ctx.fillText(val, yAxis.xStart + this.style.axis.scaleLength + xOffset, yPos);
       });
 
       if (!this.dataSource.timeRanges) {
         this.coord.verticalLines.forEach(x => {
-          ctx.fillText(Utils.Coord.getDateStr(x.actual, this.style.axis.hideCandlestickDate, this.style.axis.hideCandlestickTime), x.display + this.style.axis.labelPos.xAxis.x + ((this.style.axis.hideCandlestickDate || this.style.axis.hideCandlestickTime) && 15), y + this.style.axis.labelPos.xAxis.y * this.style.axis.xAxisPos);
+          ctx.fillText(Utils.Coord.getDateStr(x.actual, this.style.axis.hideCandlestickDate, this.style.axis.hideCandlestickTime), x.display + this.style.axis.labelPos.xAxis.x + ((this.style.axis.hideCandlestickDate || this.style.axis.hideCandlestickTime) && 15), xAxis.yStart + this.style.axis.labelPos.xAxis.y * xAxis.flag);
         });
       } else {
         this.dataSource.timeRanges.forEach((range, index) => {
@@ -1387,22 +1219,22 @@ class Render {
             displayRange = [left, right];
           }
 
-          ctx.fillText(Utils.Coord.getDateStr(range[0], true), displayRange[0] + 5, y + this.style.axis.labelPos.xAxis.y * this.style.axis.xAxisPos);
+          ctx.fillText(Utils.Coord.getDateStr(range[0], true), displayRange[0] + 5, xAxis.yStart + this.style.axis.labelPos.xAxis.y * xAxis.flag);
           var strWidth = ctx.measureText(Utils.Coord.getDateStr(range[1], true)).width;
-          ctx.fillText(Utils.Coord.getDateStr(range[1], true), displayRange[1] - strWidth - 5, y + this.style.axis.labelPos.xAxis.y * this.style.axis.xAxisPos);
+          ctx.fillText(Utils.Coord.getDateStr(range[1], true), displayRange[1] - strWidth - 5, xAxis.yStart + this.style.axis.labelPos.xAxis.y * xAxis.flag);
         });
       }
 
       if (this.style.axis.showRate) {
-        var rateX = this.style.axis.yAxisPos > 0 ? 0 : this.style.position.right;
+        var rateX = yAxis.flag > 0 ? 0 : this.style.position.right;
         this.coord.horizLines.forEach((y, index) => {
           var val = (y.actual - this.dataSource.baseValue) / this.dataSource.baseValue;
           var xOffset = ctx.measureText(val.toFixed(2) + '%').width + this.style.axis.labelPos.yAxis.x;
           var yPos = y.display + this.style.axis.labelPos.yAxis.y;
           if (yPos < 10) yPos += 10;
           if (yPos > this.originHeight - 10) yPos -= 10;
-          if (val === 0) ctx.fillText(val.toFixed(2) + '%', rateX + this.style.axis.pointerLength + xOffset * this.style.axis.yAxisPos, yPos);else {
-            rates[val > 0 ? 'up' : 'down'].push([(val * 100).toFixed(2) + '%', rateX + this.style.axis.pointerLength + xOffset * this.style.axis.yAxisPos, yPos]);
+          if (val === 0) ctx.fillText(val.toFixed(2) + '%', rateX + this.style.axis.scaleLength + xOffset * yAxis.flag, yPos);else {
+            rates[val > 0 ? 'up' : 'down'].push([(val * 100).toFixed(2) + '%', rateX + this.style.axis.scaleLength + xOffset * yAxis.flag, yPos]);
           }
         });
       }
@@ -1445,7 +1277,7 @@ class Render {
           ctx.rect(x, y - this.style.tip.currPrice.labelHeight / 2, width, this.style.tip.currPrice.labelHeight);
         }, this.style.tip.currPrice.labelBg);
         Draw.Text(this.ctx, ctx => {
-          ctx.fillText(value.toFixed(this.pricePrecision), x + this.style.axis.pointerLength + this.style.axis.labelPos.yAxis.x, y + 5);
+          ctx.fillText(value.toFixed(this.pricePrecision), x + this.style.axis.scaleLength + this.style.axis.labelPos.yAxis.x, y + 5);
         }, this.style.tip.currPrice.labelColor);
       }
     } // draw highest and lowest price
@@ -1482,15 +1314,38 @@ class Render {
       }, this.style.tip.lowColor);
       Draw.Text(this.ctx, ctx => {
         var width = ctx.measureText(maxVal).width;
-        ctx.fillText(maxVal, this.style.position.right + this.style.axis.pointerLength + this.style.axis.labelPos.yAxis.x, maxY + 5);
+        ctx.fillText(maxVal, this.style.position.right + this.style.axis.scaleLength + this.style.axis.labelPos.yAxis.x, maxY + 5);
       }, this.style.tip.highColor);
       Draw.Text(this.ctx, ctx => {
         var width = ctx.measureText(minVal).width;
-        ctx.fillText(minVal, this.style.position.right + this.style.axis.pointerLength + this.style.axis.labelPos.yAxis.x, minY + 5);
+        ctx.fillText(minVal, this.style.position.right + this.style.axis.scaleLength + this.style.axis.labelPos.yAxis.x, minY + 5);
       }, this.style.tip.lowColor);
     }
   }
 
+}
+
+function axisClean(chart) {
+  const {
+    ctx,
+    style,
+    originHeight,
+    originWidth
+  } = chart; // clear axis region
+  // 用bg先刷一次 防止AXIS颜色设置成透明时 不能正确截取图表
+
+  Draw.Fill(ctx, ctx => {
+    ctx.rect(0, 0, originWidth, style.padding.top);
+    ctx.rect(0, 0, style.padding.left, originHeight);
+    ctx.rect(style.position.right, 0, style.padding.right, originHeight);
+    ctx.rect(0, style.position.bottom, originWidth, style.padding.bottom);
+  }, style.grid.bg);
+  Draw.Fill(ctx, ctx => {
+    ctx.rect(0, 0, originWidth, style.padding.top);
+    ctx.rect(0, 0, style.padding.left, originHeight);
+    ctx.rect(style.position.right, 0, style.padding.right, originHeight);
+    ctx.rect(0, style.position.bottom, originWidth, style.padding.bottom);
+  }, style.axis.bgColor);
 }
 
 class Chart {
@@ -1592,10 +1447,8 @@ class Chart {
 
     this.render.genCoord.call(this);
     this.render.drawGrid.call(this);
-    this.render.drawSeries.call(this); // this.render.drawMainSeries.call(this)
-    // this.render.drawSubSeries.call(this)
-    // this.render.drawAxis.call(this)
-    // this.render.drawAdditionalTips.call(this)
+    this.render.drawSeries.call(this);
+    this.render.drawAxis.call(this); // this.render.drawAdditionalTips.call(this)
 
     this.state.ready = 1; // rerender all linked charts
 

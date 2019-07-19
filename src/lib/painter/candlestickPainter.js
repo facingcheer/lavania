@@ -15,7 +15,6 @@ function drawWicks(ctx, candles, wickColor) {
 
 function drawCandle(ctx, candles, columnWidth, blockColor, borderColor) {
   let half = Utils.Coord.halfcandleWidth(columnWidth)
-
   for (let direction in candles) {
     Draw.FillnStroke(ctx, ctx => {
       candles[direction].forEach(candle => {
@@ -24,7 +23,6 @@ function drawCandle(ctx, candles, columnWidth, blockColor, borderColor) {
     }, blockColor[direction], borderColor[direction])
   }
 }
-
 
 export default function(ctx, data, coord, seriesConf) {
   const candles = calcOHLC(data, coord, seriesConf)

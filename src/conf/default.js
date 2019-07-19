@@ -50,16 +50,17 @@ const DEFAULTS = function(){
         yAxisPos: 'right', // position of yAxis label, can be 'right' or 'left'
         hideCandlestickDate: false,    // 隐藏蜡烛图的日期
         hideCandlestickTime: false,    // 隐藏蜡烛图的小时分钟
+        hideBorder: false, // 显示图表border
         showRate: false,    // 显示百分比
         labelPos: {    // 坐标轴标签的位置偏移
           xAxis: {x: -35, y: 20},
           yAxis: {x: 5, y: 4}
         },
         labelColor: '#555',    // 设定坐标轴标签的颜色
-        pointerLength: 0,    // 刻度长度
+        scaleLength: 10,    // 刻度长度
         bgColor: 'rgba(0,0,0,0)',    // 坐标轴背景色
-        lineColor: 'rgba(0,0,0,0)',    // 坐标轴线颜色
-        drawFrame: false    // 是否绘制线框
+        lineColor: 'rgba(0,0,0,1)',    // 坐标轴线颜色
+        showBorder: true    // 是否绘制线框
       }
     },
     dataStyle: {    // 关于数据的样式
