@@ -115,7 +115,7 @@ class Chart {
     this.render.drawGrid.call(this)
     this.render.drawSeries.call(this)
     this.render.drawAxis.call(this)
-    // this.render.drawAdditionalTips.call(this)
+    this.render.drawAdditionalTips.call(this)
 
     this.state.ready = 1
 

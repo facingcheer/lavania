@@ -20,7 +20,7 @@
         width: 800px;
         height: 200px;
         position: relative;
-        top: -28px;
+        /* top: -28px; */
       }
     </style>
   </head>
@@ -100,9 +100,13 @@
           }
         }
         var chart11 = new Chart(document.getElementById('chart11'), pattern11)
-        chart11.style.grid.color.x = 'transparent'
-        chart11.style.grid.color.y = 'transparent'
-        chart11.rerender()
+        setTimeout(() => {
+          chart11.style.grid.color.x = 'transparent'
+          chart11.style.grid.color.y = 'transparent'
+          chart11.style.axis.labelColor = 'transparent'
+           chart11.rerender()
+        }, 0);
+
         // console.log(chart11)
 
 

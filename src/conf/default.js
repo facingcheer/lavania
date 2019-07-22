@@ -16,7 +16,10 @@ const DEFAULTS = function(){
           labelBg: 'rgba(0,0,0,0)',    // 当前价位的标签的背景色
           labelColor: 'rgba(0,0,0,0)',    // 当前价位的标签的字体颜色
           labelHeight: 20    // 当前价位标签的高度
-        }
+        },
+      },
+      lastDot:{
+        show: true
       },
       crosshair: {
         snapToClose: false,    // 十字线是否被当前close价吸引
@@ -57,10 +60,11 @@ const DEFAULTS = function(){
           yAxis: {x: 5, y: 4}
         },
         labelColor: '#555',    // 设定坐标轴标签的颜色
-        scaleLength: 10,    // 刻度长度
         bgColor: 'rgba(0,0,0,0)',    // 坐标轴背景色
         lineColor: 'rgba(0,0,0,1)',    // 坐标轴线颜色
-        showBorder: true    // 是否绘制线框
+        showScale: false,   //是否显示刻度
+        scaleLength: 10,    // 刻度长度
+        showBorder: false    // 是否绘制线框
       }
     },
     dataStyle: {    // 关于数据的样式

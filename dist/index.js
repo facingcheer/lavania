@@ -518,6 +518,9 @@ const DEFAULTS = function () {
 
         }
       },
+      lastDot: {
+        show: true
+      },
       crosshair: {
         snapToClose: false,
         // 十字线是否被当前close价吸引
@@ -598,13 +601,15 @@ const DEFAULTS = function () {
         },
         labelColor: '#555',
         // 设定坐标轴标签的颜色
-        scaleLength: 10,
-        // 刻度长度
         bgColor: 'rgba(0,0,0,0)',
         // 坐标轴背景色
         lineColor: 'rgba(0,0,0,1)',
         // 坐标轴线颜色
-        showBorder: true // 是否绘制线框
+        showScale: false,
+        //是否显示刻度
+        scaleLength: 10,
+        // 刻度长度
+        showBorder: false // 是否绘制线框
 
       }
     },
@@ -919,19 +924,23 @@ var Painter = {
 };
 
 class Render {
-  constructor(dataSource, style, ctx) {// this.dataSource = dataSource
-    // this.style = style
-    // this.ctx = ctx
+  constructor(dataSource, style, ctx) {// dataSource = dataSource
+    // style = style
+    // ctx = ctx
   }
 
   genPanes() {
+    const {
+      dataSource,
+      style
+    } = this;
     const {
       data,
       timeIndex,
       timeRanges,
       timeRangesRatio
-    } = this.dataSource;
-    let chartWidth = this.style.position.right - this.style.padding.left;
+    } = dataSource;
+    let chartWidth = style.position.right - style.padding.left;
     const paneData = Utils.Coord.datafilterByTimeRanges(data, timeRanges, timeIndex);
     const paneCoords = timeRanges.map((range, index) => {
       // calc each panes position-x
@@ -941,11 +950,11 @@ class Render {
         let prevRatio = timeRangesRatio.slice(0, index).reduce((acc, x) => {
           return acc + x;
         }, 0);
-        left = Math.round(this.style.padding.left + prevRatio * chartWidth);
-        right = Math.round(left + this.dataSource.timeRangesRatio[index] * chartWidth);
+        left = Math.round(style.padding.left + prevRatio * chartWidth);
+        right = Math.round(left + dataSource.timeRangesRatio[index] * chartWidth);
       } else {
-        const coordWidth = chartWidth / this.dataSource.timeRanges.length;
-        left = this.style.padding.left + coordWidth * index;
+        const coordWidth = chartWidth / dataSource.timeRanges.length;
+        left = style.padding.left + coordWidth * index;
         right = left + coordWidth;
       }
 
@@ -959,7 +968,7 @@ class Render {
 
     paneData.forEach((pane, index) => {
       pane.forEach(item => {
-        item.x = ~~Utils.Coord.linearActual2Display(item[this.dataSource.timeIndex], paneCoords[index].x);
+        item.x = ~~Utils.Coord.linearActual2Display(item[dataSource.timeIndex], paneCoords[index].x);
       });
     });
     this.panes = paneCoords.map((paneCoord, index) => ({
@@ -973,12 +982,13 @@ class Render {
 
   filterData() {
     const {
-      data
-    } = this.dataSource;
-    const {
       viewport,
-      style
+      style,
+      dataSource
     } = this;
+    const {
+      data
+    } = dataSource;
     this.filterData = Utils.Coord.dataFilterByViewport(data, viewport, style);
   }
 
@@ -986,17 +996,18 @@ class Render {
     // for data with no timeRanges,
     // use offset & width of data to calc data
     const {
+      viewport,
+      style,
+      filterData,
+      dataSource,
+      pricePrecision
+    } = this;
+    const {
       series,
       timeIndex,
       baseValue,
       touchTop
-    } = this.dataSource;
-    const {
-      viewport,
-      style,
-      filterData,
-      pricePrecision
-    } = this; // calculate actual-x-range of data
+    } = dataSource; // calculate actual-x-range of data
 
     let xActual = [filterData.data[0][timeIndex], filterData.data[filterData.data.length - 1][timeIndex]]; // calculate actual range of data
 
@@ -1022,12 +1033,13 @@ class Render {
   genHorizLines() {
     const {
       coord,
-      style
+      style,
+      dataSource
     } = this;
     const {
       baseValue,
       touchTop
-    } = this.dataSource;
+    } = dataSource;
     let yActual = coord.y.actual;
     let horizCount = Utils.Grid.lineCount(coord.y.display, style.grid.limit.y, style.grid.span.y);
     let hGridLines = Utils.Grid.calcGridLines(coord.y.actual, horizCount, baseValue);
@@ -1042,52 +1054,60 @@ class Render {
         display: ~~Utils.Coord.linearActual2Display(val, coord.y) + 0.5
       };
     });
-    this.coord.horizLines = horizLines;
+    coord.horizLines = horizLines;
   }
 
   genVerticalLines() {
     const {
-      style
+      style,
+      dataSource,
+      filterData,
+      viewport,
+      coord,
+      panes
     } = this;
     const {
       timeRanges
-    } = this.dataSource;
+    } = dataSource;
     var verticalLines = [];
 
     if (timeRanges) {
-      this.panes.forEach(pane => {
+      panes.forEach(pane => {
         verticalLines.push({
           display: pane.paneCoord.x.display[0] + 0.5,
           actual: pane.paneCoord.x.actual[0]
         });
       });
       verticalLines.push({
-        display: this.panes[this.panes.length - 1].paneCoord.x.display[1] + 0.5,
-        actual: this.panes[this.panes.length - 1].paneCoord.x.actual[1]
+        display: panes[panes.length - 1].paneCoord.x.display[1] + 0.5,
+        actual: panes[panes.length - 1].paneCoord.x.actual[1]
       });
     } else {
       // vertical grid line drawing for candlestick chart
-      for (var l = this.filterData.data.length - 1; l >= 0; l -= ~~(this.style.grid.span.x / this.viewport.width)) {
-        if (this.filterData.data[l].x > style.padding.left && this.filterData.data[l].x <= style.position.right) verticalLines.push({
-          display: ~~this.filterData.data[l].x + 0.5,
-          actual: this.filterData.data[l][this.dataSource.timeIndex]
+      for (var l = filterData.data.length - 1; l >= 0; l -= ~~(style.grid.span.x / viewport.width)) {
+        if (filterData.data[l].x > style.padding.left && filterData.data[l].x <= style.position.right) verticalLines.push({
+          display: ~~filterData.data[l].x + 0.5,
+          actual: filterData.data[l][dataSource.timeIndex]
         });
       }
     }
 
-    this.coord.verticalLines = verticalLines;
+    coord.verticalLines = verticalLines;
   }
 
   drawGrid() {
     const {
       coord,
-      style
+      style,
+      ctx,
+      dataSource
     } = this; // draw horizontal lines
+    // debugger
 
     const hLines = style.axis.hideBorder ? coord.horizLines.slice(1, -1) : coord.horizLines;
 
     if (coord.horizLines) {
-      Draw.Stroke(this.ctx, ctx => {
+      Draw.Stroke(ctx, ctx => {
         hLines.forEach((y, index) => {
           ctx.moveTo(style.padding.left, y.display);
           ctx.lineTo(style.position.right, y.display);
@@ -1098,7 +1118,7 @@ class Render {
     const vLines = style.axis.hideBorder ? coord.verticalLines.slice(1, -1) : coord.verticalLines; // draw vertical lines
 
     if (coord.verticalLines) {
-      Draw.Stroke(this.ctx, ctx => {
+      Draw.Stroke(ctx, ctx => {
         vLines.forEach((val, ind) => {
           ctx.moveTo(val.display, style.padding.top);
           ctx.lineTo(val.display, style.position.bottom);
@@ -1109,24 +1129,29 @@ class Render {
 
   drawSeries() {
     const {
+      coord,
+      dataSource,
+      ctx,
+      filterData,
+      style,
+      panes
+    } = this;
+    const {
       series,
       valueIndex
-    } = this.dataSource;
-    const {
-      coord
-    } = this;
+    } = dataSource;
     series.map(s => {
       if (s.type === 'line' || s.type === 'mountain' || s.type === 'candlestick' || s.type === 'OHLC') {
-        Painter[s.type](this.ctx, this.filterData.data, coord, s);
+        Painter[s.type](ctx, filterData.data, coord, s);
       }
 
       if (s.type === 'column') {
-        if (this.dataSource.timeRanges) {
-          Painter.panesColumn(this.ctx, this.panes, coord, s);
+        if (dataSource.timeRanges) {
+          Painter.panesColumn(ctx, panes, coord, s);
         }
 
-        if (!this.dataSource.timeRanges) {
-          Painter.column(this.ctx, this.filterData.data, coord, s, this.style.position.bottom);
+        if (!dataSource.timeRanges) {
+          Painter.column(ctx, filterData.data, coord, s, style.position.bottom);
         }
       }
     });
@@ -1136,8 +1161,12 @@ class Render {
     const {
       ctx,
       style,
+      coord,
+      dataSource,
+      dataStyle,
       originHeight,
-      originWidth
+      originWidth,
+      pricePrecision
     } = this;
     axisClean(this);
     let yAxis = {};
@@ -1150,176 +1179,195 @@ class Render {
     xAxis.yStart = ~xAxis.flag ? style.position.bottom : style.padding.top;
     yAxis.scaleStart = ~yAxis.flag ? style.position.right : style.padding.left; // draw axis lines
 
-    Draw.Stroke(this.ctx, ctx => {
-      this.coord.horizLines.forEach(hl => {
-        ctx.moveTo(yAxis.scaleStart, hl.display);
-        ctx.lineTo(yAxis.scaleStart + style.axis.scaleLength * yAxis.flag, hl.display);
-      });
-      this.coord.verticalLines.forEach(vl => {
-        ctx.moveTo(vl.display, xAxis.yStart);
-        ctx.lineTo(vl.display, xAxis.yStart + this.style.axis.scaleLength * xAxis.flag);
-      }); // draw axis line
+    Draw.Stroke(ctx, ctx => {
+      if (style.axis.showScale) {
+        coord.horizLines.forEach(hl => {
+          ctx.moveTo(yAxis.scaleStart, hl.display);
+          ctx.lineTo(yAxis.scaleStart + style.axis.scaleLength * yAxis.flag, hl.display);
+        });
+        coord.verticalLines.forEach(vl => {
+          ctx.moveTo(vl.display, xAxis.yStart);
+          ctx.lineTo(vl.display, xAxis.yStart + style.axis.scaleLength * xAxis.flag);
+        });
+        ctx.moveTo(yAxis.scaleStart + 0.5, style.padding.top);
+        ctx.lineTo(yAxis.scaleStart + 0.5, style.position.bottom);
+        ctx.moveTo(style.padding.left, xAxis.yStart + 0.5);
+        ctx.lineTo(style.position.right, xAxis.yStart + 0.5);
+      } // draw axis line
 
-      ctx.moveTo(yAxis.scaleStart + 0.5, this.style.padding.top);
-      ctx.lineTo(yAxis.scaleStart + 0.5, this.style.position.bottom);
-      ctx.moveTo(style.padding.left, xAxis.yStart + 0.5);
-      ctx.lineTo(style.position.right, xAxis.yStart + 0.5);
 
       if (style.axis.showBorder) {
+        ctx.moveTo(yAxis.scaleStart + 0.5, style.padding.top);
+        ctx.lineTo(yAxis.scaleStart + 0.5, style.position.bottom);
+        ctx.moveTo(style.padding.left, xAxis.yStart + 0.5);
+        ctx.lineTo(style.position.right, xAxis.yStart + 0.5);
         const xOp = ~yAxis.flag ? style.padding.left : style.position.right;
         ctx.moveTo(xOp + 0.5, style.padding.top + 0.5);
         ctx.lineTo(xOp + 0.5, style.position.bottom + 0.5);
         const yOp = ~xAxis.flag ? style.padding.top : style.position.bottom;
-        ctx.moveTo(this.style.padding.left, yOp);
-        ctx.lineTo(this.style.position.right, yOp);
+        ctx.moveTo(style.padding.left, yOp + 0.5);
+        ctx.lineTo(style.position.right, yOp + 0.5);
       }
 
-      if (this.style.axis.showRate) {
-        var rateX = yAxis.flag > 0 ? this.style.padding.left : this.style.position.right;
-        ctx.moveTo(rateX + 0.5, this.style.padding.top);
-        ctx.lineTo(rateX + 0.5, this.style.position.bottom);
-        this.coord.horizLines.forEach(y => {
+      if (style.axis.showRate) {
+        var rateX = yAxis.flag > 0 ? style.padding.left : style.position.right;
+        ctx.moveTo(rateX + 0.5, style.padding.top);
+        ctx.lineTo(rateX + 0.5, style.position.bottom);
+        coord.horizLines.forEach(y => {
           ctx.moveTo(rateX, y.display);
-          ctx.lineTo(rateX + this.style.axis.scaleLength * -yAxis.flag, y.display);
+          ctx.lineTo(rateX + style.axis.scaleLength * -yAxis.flag, y.display);
         });
       }
-    }, this.style.axis.lineColor); // draw labels
+    }, style.axis.lineColor); // draw labels
 
     var rates = {
       up: [],
       down: []
     };
-    Draw.Text(this.ctx, ctx => {
-      this.coord.horizLines.forEach((y, index) => {
-        var val = y.actual.toFixed(this.pricePrecision);
-        var xOffset = this.style.axis.labelPos.yAxis.x;
-        var yPos = y.display + this.style.axis.labelPos.yAxis.y;
+    Draw.Text(ctx, ctx => {
+      coord.horizLines.forEach((y, index) => {
+        const val = y.actual.toFixed(pricePrecision);
+        const xOffset = style.axis.labelPos.yAxis.x;
+        var yPos = y.display + style.axis.labelPos.yAxis.y;
         if (yPos < 10) yPos += 10;
-        if (yPos > this.originHeight - 10) yPos -= 10;
-        ctx.fillText(val, yAxis.xStart + this.style.axis.scaleLength + xOffset, yPos);
+        if (yPos > originHeight - 10) yPos -= 10;
+        ctx.fillText(val, yAxis.xStart + style.axis.scaleLength + xOffset, yPos);
       });
 
-      if (!this.dataSource.timeRanges) {
-        this.coord.verticalLines.forEach(x => {
-          ctx.fillText(Utils.Coord.getDateStr(x.actual, this.style.axis.hideCandlestickDate, this.style.axis.hideCandlestickTime), x.display + this.style.axis.labelPos.xAxis.x + ((this.style.axis.hideCandlestickDate || this.style.axis.hideCandlestickTime) && 15), xAxis.yStart + this.style.axis.labelPos.xAxis.y * xAxis.flag);
+      if (!dataSource.timeRanges) {
+        coord.verticalLines.forEach(x => {
+          ctx.fillText(Utils.Coord.getDateStr(x.actual, style.axis.hideCandlestickDate, style.axis.hideCandlestickTime), x.display + style.axis.labelPos.xAxis.x + ((style.axis.hideCandlestickDate || style.axis.hideCandlestickTime) && 15), xAxis.yStart + style.axis.labelPos.xAxis.y * xAxis.flag);
         });
       } else {
-        this.dataSource.timeRanges.forEach((range, index) => {
-          var width = this.style.position.right - this.style.padding.left;
-          var displayRange = [index * width / this.dataSource.timeRanges.length, (index + 1) * width / this.dataSource.timeRanges.length];
+        dataSource.timeRanges.forEach((range, index) => {
+          var width = style.position.right - style.padding.left;
+          var displayRange = [index * width / dataSource.timeRanges.length, (index + 1) * width / dataSource.timeRanges.length];
 
-          if (this.dataSource.timeRangesRatio) {
-            var widthRatio = this.dataSource.timeRangesRatio;
+          if (dataSource.timeRangesRatio) {
+            var widthRatio = dataSource.timeRangesRatio;
             var prevRatio = widthRatio.slice(0, index).reduce((acc, x) => {
               return acc + x;
             }, 0);
             var ratio = widthRatio[index];
-            var left = Math.round(this.style.padding.left + prevRatio * width);
+            var left = Math.round(style.padding.left + prevRatio * width);
             var right = Math.round(left + ratio * width);
             displayRange = [left, right];
           }
 
-          ctx.fillText(Utils.Coord.getDateStr(range[0], true), displayRange[0] + 5, xAxis.yStart + this.style.axis.labelPos.xAxis.y * xAxis.flag);
+          ctx.fillText(Utils.Coord.getDateStr(range[0], true), displayRange[0] + 5, xAxis.yStart + style.axis.labelPos.xAxis.y * xAxis.flag);
           var strWidth = ctx.measureText(Utils.Coord.getDateStr(range[1], true)).width;
-          ctx.fillText(Utils.Coord.getDateStr(range[1], true), displayRange[1] - strWidth - 5, xAxis.yStart + this.style.axis.labelPos.xAxis.y * xAxis.flag);
+          ctx.fillText(Utils.Coord.getDateStr(range[1], true), displayRange[1] - strWidth - 5, xAxis.yStart + style.axis.labelPos.xAxis.y * xAxis.flag);
         });
       }
 
-      if (this.style.axis.showRate) {
-        var rateX = yAxis.flag > 0 ? 0 : this.style.position.right;
-        this.coord.horizLines.forEach((y, index) => {
-          var val = (y.actual - this.dataSource.baseValue) / this.dataSource.baseValue;
-          var xOffset = ctx.measureText(val.toFixed(2) + '%').width + this.style.axis.labelPos.yAxis.x;
-          var yPos = y.display + this.style.axis.labelPos.yAxis.y;
+      if (style.axis.showRate) {
+        var rateX = yAxis.flag > 0 ? 0 : style.position.right;
+        coord.horizLines.forEach((y, index) => {
+          var val = (y.actual - dataSource.baseValue) / dataSource.baseValue;
+          var xOffset = ctx.measureText(val.toFixed(2) + '%').width + style.axis.labelPos.yAxis.x;
+          var yPos = y.display + style.axis.labelPos.yAxis.y;
           if (yPos < 10) yPos += 10;
-          if (yPos > this.originHeight - 10) yPos -= 10;
-          if (val === 0) ctx.fillText(val.toFixed(2) + '%', rateX + this.style.axis.scaleLength + xOffset * yAxis.flag, yPos);else {
-            rates[val > 0 ? 'up' : 'down'].push([(val * 100).toFixed(2) + '%', rateX + this.style.axis.scaleLength + xOffset * yAxis.flag, yPos]);
+          if (yPos > originHeight - 10) yPos -= 10;
+          if (val === 0) ctx.fillText(val.toFixed(2) + '%', rateX + style.axis.scaleLength + xOffset * yAxis.flag, yPos);else {
+            rates[val > 0 ? 'up' : 'down'].push([(val * 100).toFixed(2) + '%', rateX + style.axis.scaleLength + xOffset * yAxis.flag, yPos]);
           }
         });
       }
-    }, this.style.axis.labelColor);
+    }, style.axis.labelColor);
 
     for (var direction in rates) {
-      Draw.Text(this.ctx, ctx => {
+      Draw.Text(ctx, ctx => {
         rates[direction].forEach(item => {
           ctx.fillText(item[0], item[1], item[2]);
         });
-      }, this.dataStyle.OHLC[direction]);
+      }, dataStyle.OHLC[direction]);
     }
   }
 
   drawAdditionalTips() {
-    if (this.dataSource.timeRanges !== undefined && this.dataSource.baseValue !== undefined) {
-      var y = ~~Utils.Coord.linearActual2Display(this.dataSource.baseValue, this.coord.y);
-      Draw.Stroke(this.ctx, ctx => {
+    const {
+      dataSource,
+      ctx,
+      coord,
+      style,
+      filterData,
+      pricePrecision,
+      dataStyle
+    } = this;
+
+    if (dataSource.timeRanges !== undefined && dataSource.baseValue !== undefined) {
+      var y = ~~Utils.Coord.linearActual2Display(dataSource.baseValue, coord.y);
+      Draw.Stroke(ctx, ctx => {
         ctx.lineWidth = 2;
         ctx.setLineDash([5, 5]);
-        ctx.moveTo(this.style.padding.left, y);
-        ctx.lineTo(this.style.position.right, y);
-      }, this.dataStyle.baseValue);
+        ctx.moveTo(style.padding.left, y);
+        ctx.lineTo(style.position.right, y);
+      }, dataStyle.baseValue);
     } // draw current price
 
 
-    if (this.dataSource.data.length > 0) {
-      if (this.dataSource.series[0].main) {
-        const x = this.style.axis.yAxisPos === 'right' ? this.style.position.right : 0;
-        const width = this.style.axis.yAxisPos === 'right' ? this.style.padding.right : this.style.padding.left;
-        const last = this.dataSource.data[this.dataSource.data.length - 1];
-        const value = last[this.dataSource.series[0].c === undefined ? this.dataSource.series[0].valIndex : this.dataSource.series[0].c];
-        const y = ~~Utils.Coord.linearActual2Display(value, this.coord.y);
-        Draw.Stroke(this.ctx, ctx => {
-          ctx.lineWidth = this.style.tip.currPrice.lineWidth;
-          ctx.moveTo(this.style.padding.left, y + 0.5);
-          ctx.lineTo(this.style.position.right, y + 0.5);
-        }, this.style.tip.currPrice.lineColor);
-        Draw.Fill(this.ctx, ctx => {
-          ctx.rect(x, y - this.style.tip.currPrice.labelHeight / 2, width, this.style.tip.currPrice.labelHeight);
-        }, this.style.tip.currPrice.labelBg);
-        Draw.Text(this.ctx, ctx => {
-          ctx.fillText(value.toFixed(this.pricePrecision), x + this.style.axis.scaleLength + this.style.axis.labelPos.yAxis.x, y + 5);
-        }, this.style.tip.currPrice.labelColor);
+    const mainSeries = dataSource.series.find(s => s.main);
+
+    if (dataSource.data.length > 0) {
+      if (mainSeries) {
+        const x = style.axis.yAxisPos === 'right' ? style.position.right : 0;
+        const width = style.axis.yAxisPos === 'right' ? style.padding.right : style.padding.left;
+        const last = dataSource.data[dataSource.data.length - 1];
+        const value = last[mainSeries.c || mainSeries.valIndex];
+        const y = ~~Utils.Coord.linearActual2Display(value, coord.y);
+        Draw.Stroke(ctx, ctx => {
+          ctx.lineWidth = style.tip.currPrice.lineWidth;
+          ctx.moveTo(style.padding.left, y + 0.5);
+          ctx.lineTo(style.position.right, y + 0.5);
+        }, style.tip.currPrice.lineColor);
+        Draw.Fill(ctx, ctx => {
+          ctx.rect(x, y - style.tip.currPrice.labelHeight / 2, width, style.tip.currPrice.labelHeight);
+        }, style.tip.currPrice.labelBg);
+        Draw.Text(ctx, ctx => {
+          ctx.fillText(value.toFixed(pricePrecision), x + style.axis.scaleLength + style.axis.labelPos.yAxis.x, y + 5);
+        }, style.tip.currPrice.labelColor);
       }
     } // draw highest and lowest price
 
 
-    if (this.dataSource.series[0].type === 'candlestick') {
-      var max = this.filterData.data[0];
-      var min = this.filterData.data[0];
-      var highIndex = this.dataSource.series[0].h;
-      var lowIndex = this.dataSource.series[0].l;
+    if (style.lastDot.show && mainSeries && filterData && filterData.data && filterData.data.length) {
+      let max = filterData.data[0];
+      let min = filterData.data[0];
 
-      if (this.dataSource.series[0].as === 'mountain') {
-        highIndex = this.dataSource.series[0].c;
-        lowIndex = this.dataSource.series[0].c;
+      if (mainSeries.type === 'candlestick' || mainSeries.type === 'OHLC') {
+        var highIndex = mainSeries.h;
+        var lowIndex = mainSeries.l;
+      } else {
+        highIndex = mainSeries.valIndex;
+        lowIndex = mainSeries.valIndex;
       }
 
-      this.filterData.data.forEach(item => {
+      filterData.data.forEach(item => {
         if (item[highIndex] > max[highIndex]) max = item;
         if (item[lowIndex] < min[lowIndex]) min = item;
       });
-      var maxVal = max[highIndex].toFixed(this.pricePrecision);
-      var maxY = ~~Utils.Coord.linearActual2Display(max[highIndex], this.coord.y) + 0.5;
-      var minVal = min[lowIndex].toFixed(this.pricePrecision);
-      var minY = ~~Utils.Coord.linearActual2Display(min[lowIndex], this.coord.y) + 0.5;
-      Draw.Stroke(this.ctx, ctx => {
+      const maxVal = max[highIndex].toFixed(pricePrecision);
+      const maxY = ~~Utils.Coord.linearActual2Display(max[highIndex], coord.y) + 0.5;
+      const minVal = min[lowIndex].toFixed(pricePrecision);
+      const minY = ~~Utils.Coord.linearActual2Display(min[lowIndex], coord.y) + 0.5;
+      Draw.Stroke(ctx, ctx => {
         ctx.setLineDash([5, 5]);
-        ctx.moveTo(this.style.padding.left, maxY);
-        ctx.lineTo(this.style.position.right, maxY);
-      }, this.style.tip.highColor);
-      Draw.Stroke(this.ctx, ctx => {
+        ctx.moveTo(style.padding.left, maxY);
+        ctx.lineTo(style.position.right, maxY);
+      }, style.tip.highColor);
+      Draw.Stroke(ctx, ctx => {
         ctx.setLineDash([5, 5]);
-        ctx.moveTo(this.style.padding.left, minY);
-        ctx.lineTo(this.style.position.right, minY);
-      }, this.style.tip.lowColor);
-      Draw.Text(this.ctx, ctx => {
-        var width = ctx.measureText(maxVal).width;
-        ctx.fillText(maxVal, this.style.position.right + this.style.axis.scaleLength + this.style.axis.labelPos.yAxis.x, maxY + 5);
-      }, this.style.tip.highColor);
-      Draw.Text(this.ctx, ctx => {
-        var width = ctx.measureText(minVal).width;
-        ctx.fillText(minVal, this.style.position.right + this.style.axis.scaleLength + this.style.axis.labelPos.yAxis.x, minY + 5);
-      }, this.style.tip.lowColor);
+        ctx.moveTo(style.padding.left, minY);
+        ctx.lineTo(style.position.right, minY);
+      }, style.tip.lowColor);
+      Draw.Text(ctx, ctx => {
+        const width = ctx.measureText(maxVal).width;
+        ctx.fillText(maxVal, style.position.right + style.axis.scaleLength + style.axis.labelPos.yAxis.x, maxY + 5);
+      }, style.tip.highColor);
+      Draw.Text(ctx, ctx => {
+        const width = ctx.measureText(minVal).width;
+        ctx.fillText(minVal, style.position.right + style.axis.scaleLength + style.axis.labelPos.yAxis.x, minY + 5);
+      }, style.tip.lowColor);
     }
   }
 
@@ -1448,8 +1496,8 @@ class Chart {
     this.render.genCoord.call(this);
     this.render.drawGrid.call(this);
     this.render.drawSeries.call(this);
-    this.render.drawAxis.call(this); // this.render.drawAdditionalTips.call(this)
-
+    this.render.drawAxis.call(this);
+    this.render.drawAdditionalTips.call(this);
     this.state.ready = 1; // rerender all linked charts
 
     if (this.linkedCharts.length()) {
