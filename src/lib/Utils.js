@@ -1,4 +1,3 @@
-import Log from './Log'
 const Utils = {
   Safe: {
     dataCheck(dataSource) {
@@ -189,6 +188,12 @@ const Utils = {
     }
   },
   Coord: {
+    getDistance(p1, p2) {
+      var xDiff = p1.clientX - p2.clientX
+      var yDiff = p1.clientY - p2.clientY
+      return Math.sqrt(xDiff * xDiff + yDiff * yDiff)
+    },
+
     getDateStr(date, noDate, noTime) {
       if (typeof date === 'number')
         date = new Date(date)

@@ -2,9 +2,13 @@ import Utils from './Utils'
 import DEFAULTS from '../conf/default'
 // import render from './render.old'
 import Render from './Render.mjs'
+import { genEvent } from './Events.js'
+
+import MouseEventHandler from './MouseEventHandler'
+
 
 class Chart {
-  constructor(container, pattern ,noRender) {
+  constructor(container, pattern, noRender) {
     // prevent same data for different charts
     pattern.dataSource.data = JSON.parse(JSON.stringify(pattern.dataSource.data))
     Utils.Safe.dataCheck(pattern.dataSource)
@@ -35,8 +39,11 @@ class Chart {
     this.render = new Render()
     this.genStyle()
 
-    // this.events = this.genDefaultEvents()
+    this.events = genEvent()
+
     // this.bindEvents()
+    this._mouseEventHandler = new MouseEventHandler(iaCanvasEl, this.events, true, false)
+
     if (!noRender)
     this.rerender()
   }

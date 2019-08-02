@@ -76,8 +76,6 @@ export default {
     })
   },
   drawGrid() {
-    LOG.EXIST(this.coord, 'coord')
-
     var self = this
     // draw background
     Util.Draw.Fill(this.ctx, function(ctx){
