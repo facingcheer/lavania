@@ -27,11 +27,10 @@ class Chart {
       iaCtxClock: 0,
       midCtxInterval: 0
     }
-    this.linkedCharts = Utils.DataTypes.Set()
+    this.linkedCharts = new Set
     this.defaults = DEFAULTS()
 
     // setting chart properties
-    // let dict = ['viewport', 'pricePrecision', 'style', 'dataStyle', 'dataSource']
     ;['viewport', 'pricePrecision', 'dataStyle', 'style', 'dataSource'].forEach((key) => {
       this[key] = pattern[key] || this.defaults[key]
     })
@@ -39,7 +38,7 @@ class Chart {
     this.render = new Render()
     this.genStyle()
 
-    this.events = genEvent()
+    this.events = genEvent(this, this.dataSource.timeRanges ? 'unscalable' : 'scalable')
 
     // this.bindEvents()
     this._mouseEventHandler = new MouseEventHandler(iaCanvasEl, this.events, true, false)
@@ -127,8 +126,8 @@ class Chart {
     this.state.ready = 1
 
     // rerender all linked charts
-    if (this.linkedCharts.length()){
-      this.linkedCharts.forEach((chart) => {
+    if (this.linkedCharts.size){
+      [...this.linkedCharts].forEach(chart => {
         chart.viewport = this.viewport
         chart.rerender()
       })
@@ -139,9 +138,9 @@ class Chart {
     this.iaCtx.clearRect(0, 0, this.originWidth, this.originHeight)
 
     // rerender all linked charts
-    if (this.linkedCharts.length() && !force){
+    if (this.linkedCharts.size && !force){
       this.linkedCharts.forEach(chart => {
-        chart.events.mouseout.clean.call(chart, null, 'clean', true)
+        // chart.events.mouseout.clean.call(chart, null, 'clean', true)
       })
     }
   }

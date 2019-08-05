@@ -1,6 +1,6 @@
 import Utils from './Utils'
 import Draw from './utils/Draw'
-import Painter from './painter/index'
+import { chartPainter } from './painter/index'
 
 
 export default class Render {
@@ -175,14 +175,14 @@ export default class Render {
 
    series.map(s => {
      if (s.type === 'line' || s.type === 'mountain' || s.type === 'candlestick' || s.type === 'OHLC') {
-      Painter[s.type](ctx, filterData.data, coord, s)
+      chartPainter[s.type](ctx, filterData.data, coord, s)
      }
      if(s.type === 'column') {
        if(dataSource.timeRanges) {
-          Painter.panesColumn(ctx, panes, coord, s)
+        chartPainter.panesColumn(ctx, panes, coord, s)
        }
        if(!dataSource.timeRanges) {
-          Painter.column(ctx, filterData.data, coord, s, style.position.bottom)
+        chartPainter.column(ctx, filterData.data, coord, s, style.position.bottom)
         }
      }
    })

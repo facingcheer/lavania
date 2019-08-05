@@ -177,10 +177,13 @@ const Utils = {
       ctx.closePath()
       ctx.restore()
     },
-    Text(ctx, func, fillStyle, fontStyle) {
+    Text(ctx, func, fillStyle, fontStyle, textBaseline ) {
       ctx.save()
       if (fontStyle)
         ctx.font = fontStyle
+
+      if (textBaseline)
+        ctx.textBaseline = textBaseline
 
       ctx.fillStyle = fillStyle || 'black'
       func(ctx)

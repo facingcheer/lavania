@@ -175,9 +175,10 @@ const Utils = {
       ctx.restore();
     },
 
-    Text(ctx, func, fillStyle, fontStyle) {
+    Text(ctx, func, fillStyle, fontStyle, textBaseline) {
       ctx.save();
       if (fontStyle) ctx.font = fontStyle;
+      if (textBaseline) ctx.textBaseline = textBaseline;
       ctx.fillStyle = fillStyle || 'black';
       func(ctx);
       ctx.restore();
@@ -489,7 +490,8 @@ const DEFAULTS = function () {
     },
     // 图表显示的视野, width表示单个数据元素占用宽度
     pricePrecision: 5,
-    // 设定的数据精度
+    // 设定的数据精度,
+    dateFormatPattern: 'MM/DD HH:mm',
     style: {
       font: {
         family: 'Microsoft YaHei',
@@ -920,7 +922,7 @@ function mountainPainter (ctx, data, coord, seriesConf) {
   return linePainter(ctx, data, coord, seriesConf, decorators);
 }
 
-var Painter = {
+const chartPainter = {
   line: linePainter,
   candlestick: candlestickPainter,
   OHLC: ohlcPainter,
@@ -1148,16 +1150,16 @@ class Render {
     } = dataSource;
     series.map(s => {
       if (s.type === 'line' || s.type === 'mountain' || s.type === 'candlestick' || s.type === 'OHLC') {
-        Painter[s.type](ctx, filterData.data, coord, s);
+        chartPainter[s.type](ctx, filterData.data, coord, s);
       }
 
       if (s.type === 'column') {
         if (dataSource.timeRanges) {
-          Painter.panesColumn(ctx, panes, coord, s);
+          chartPainter.panesColumn(ctx, panes, coord, s);
         }
 
         if (!dataSource.timeRanges) {
-          Painter.column(ctx, filterData.data, coord, s, style.position.bottom);
+          chartPainter.column(ctx, filterData.data, coord, s, style.position.bottom);
         }
       }
     });
@@ -1402,12 +1404,327 @@ function axisClean(chart) {
   }, style.axis.bgColor);
 }
 
-function genEvent(type) {
-  return {
-    mouseMoveEvent(event) {}
+const RGX = /([^{]*?)\w(?=\})/g;
+const MAP = {
+  YYYY: 'getFullYear',
+  YY: 'getYear',
+  MM: function (d) {
+    return d.getMonth() + 1;
+  },
+  DD: 'getDate',
+  HH: 'getHours',
+  mm: 'getMinutes',
+  ss: 'getSeconds',
+  fff: 'getMilliseconds'
+};
+function dateFormatter (date, pattern, custom) {
+  let parts = [],
+      offset = 0;
+  pattern.replace(RGX, (key, _, idx) => {
+    // save preceding string
+    parts.push(pattern.substring(offset, idx - 1));
+    offset = idx += key.length + 1; // save function
 
-  };
+    parts.push(custom && custom[key] || function (d) {
+      return ('00' + (typeof MAP[key] === 'string' ? d[MAP[key]]() : MAP[key](d))).slice(-key.length);
+    });
+  });
+
+  if (offset !== pattern.length) {
+    parts.push(pattern.substring(offset));
+  }
+
+  let out = '',
+      i = 0;
+  let d = typeof date === 'number' ? new Date(date) : date;
+
+  for (; i < parts.length; i++) {
+    out += typeof parts[i] === 'string' ? parts[i] : parts[i](d);
+  }
+
+  return out;
 }
+
+const originPosMap = {
+  left: [0, 0.5],
+  top: [0.5, 0],
+  right: [1, 0.5],
+  bottom: [0.5, 1],
+  lefttop: [0, 0],
+  righttop: [1, 0],
+  leftbottom: [0, 1],
+  rightbottom: [1, 1],
+  center: [0.5, 0.5] // originPos: provide origin in the position of the label
+
+};
+function textLabelPainter({
+  ctx,
+  text,
+  origin,
+  originPos,
+  labelHeight,
+  labelXPadding,
+  font,
+  xMax,
+  yMax,
+  fontColor,
+  labelBg
+}) {
+  let labelWidth;
+  Utils.Draw.Text(ctx, ctx => {
+    labelWidth = ctx.measureText(text).width + labelXPadding * 2;
+  }, null, font); // realOrigin origin can be use for CanvasRenderingContext2D.rect() {x:x,y:y}
+
+  let realOrigin = {
+    x: origin.x - originPosMap[originPos][0] * labelWidth,
+    y: origin.y - originPosMap[originPos][1] * labelHeight
+  };
+  realOrigin.x = realOrigin.x < 0 ? 0 : realOrigin.x + labelWidth > xMax ? xMax - labelWidth : realOrigin.x;
+  Utils.Draw.Fill(ctx, ctx => {
+    ctx.rect(realOrigin.x, realOrigin.y, labelWidth, labelHeight);
+  }, labelBg); // draw x label text
+
+  let textX = realOrigin.x + labelXPadding;
+  let textY = realOrigin.y + labelHeight / 2;
+  Utils.Draw.Text(ctx, ctx => {
+    ctx.fillText(text, textX, textY);
+  }, fontColor, font, 'middle');
+}
+
+const eventSource = {
+  scalable: {
+    mouseMoveEvent: ['basic', 'crosshair', 'axisLabel', 'selectDot'],
+    mouseLeaveEvent: ['clean'],
+    mouseDownEvent: ['dragStart'],
+    pressedMouseMoveEvent: ['dragMove'],
+    mouseUpEvent: ['dragEnd']
+  },
+  unscalable: {
+    mouseMoveEvent: ['basic', 'crosshair', 'axisLabel', 'selectDot'],
+    mouseLeaveEvent: ['clean']
+  }
+};
+const eventList = ['mouseMoveEvent', 'mouseLeaveEvent', 'mouseDownEvent', 'pressedMouseMoveEvent', 'mouseUpEvent'];
+function genEvent(chart, type) {
+  let e = {}; // eslint-disable-next-line camelcase
+
+  chart.state.events = {
+    selectedItem: null,
+    dragStart: {
+      x: null,
+      y: null,
+      offset: null
+    },
+    pinchWidth: null,
+    pinchDistance: null
+  };
+  eventList.forEach(name => {
+    e[name] = event => {
+      if (!event || !eventSource[type] || !eventSource[type][name]) {
+        return;
+      }
+
+      eventSource[type][name].forEach(eventName => {
+        events[eventName] && events[eventName](chart, event);
+
+        if (chart.linkedCharts.size) {
+          [...chart.linkedCharts].forEach(chart => {
+            events[eventName] && events[eventName](chart, event, true);
+          });
+        }
+      });
+    };
+  });
+  e.pinchEvent = events.pinchEvent;
+  return e;
+}
+const events = {
+  basic(chart, e) {
+    // const chart = this
+    chart.iaCtx.clearRect(0, 0, chart.originWidth, chart.originHeight);
+  },
+
+  // crosshair drawing method
+  // linked means being called by other charts
+  crosshair(chart, e, linked) {
+    // const chart = this
+    //rerender all linked charts
+    // if (chart.linkedCharts.size && !linked){
+    //   [...chart.linkedCharts].forEach(c => {
+    //     c.state.events = e
+    //     events.crosshair.call(c, e, true)
+    //   })
+    // }
+    if (linked) chart.iaCtx.clearRect(0, 0, chart.originWidth, chart.originHeight);
+    if (!linked && (e.localY < chart.style.position.top || e.localY > chart.style.position.bottom)) return;
+    if (e.localX < chart.style.position.left || e.localX > chart.style.position.right) return;
+    e.selectedItem = getNearest[chart.dataSource.timeRanges ? 'unscalable' : 'scalable'](chart, e);
+
+    if (chart.state.event) {
+      chart.state.event.selectedItem = e.selectedItem;
+    }
+
+    if (!e.selectedItem) return;
+    Utils.Draw.Stroke(chart.iaCtx, ctx => {
+      ctx.lineWidth = chart.style.crosshair.lineWidth || 1;
+      ctx.setLineDash(chart.style.crosshair.dash); // verticalPos = e.localX
+
+      var fixOffset = ctx.lineWidth % 2 ? 0.5 : 0; // draw horizontal line
+
+      if (!linked) {
+        e.yPos = chart.style.crosshair.snapToClose && e.selectedItem ? ~~Utils.Coord.linearActual2Display(e.selectedItem[chart.dataSource.series[0].c || chart.dataSource.series[0].valIndex], chart.coord.y) : e.localY;
+        ctx.moveTo(chart.style.position.left, e.yPos + fixOffset);
+        ctx.lineTo(chart.style.position.right, e.yPos + fixOffset);
+      } // draw vertical line
+
+
+      ctx.moveTo(e.selectedItem.x + fixOffset, chart.style.position.top);
+      ctx.lineTo(e.selectedItem.x + fixOffset, chart.style.position.bottom);
+    }, chart.style.crosshair.color);
+  },
+
+  axisLabel(chart, e, linked) {
+    // const chart = this
+    if (!e.selectedItem) return; // find the horizontal label width
+
+    let hoverTime = e.selectedItem[chart.dataSource.timeIndex];
+    let hoverTimeStr = dateFormatter(hoverTime, '{MM}/{DD} {HH}:{mm}');
+    textLabelPainter({
+      ctx: chart.iaCtx,
+      text: hoverTimeStr,
+      origin: {
+        x: e.selectedItem.x,
+        y: chart.style.crosshair.posOffset.horizontal.y + (chart.style.axis.xAxisPos === 'bottom' ? chart.style.position.bottom : chart.style.position.top - chart.style.crosshair.labelHeight)
+      },
+      originPos: 'top',
+      labelHeight: 20,
+      labelXPadding: 5,
+      font: null,
+      xMax: chart.originWidth,
+      yMax: chart.originHeight,
+      fontColor: '#666',
+      labelBg: '#efefef'
+    });
+    if (linked) return;
+    let horizPos = chart.style.crosshair.snapToClose && e.selectedItem ? ~~Utils.Coord.linearActual2Display(e.selectedItem[chart.dataSource.series[0].c || chart.dataSource.series[0].valIndex], chart.coord.y) : e.localY;
+    let hoverValue = !linked ? Utils.Coord.linearDisplay2Actual(horizPos, chart.coord.y).toFixed(chart.pricePrecision) : 0;
+    textLabelPainter({
+      ctx: chart.iaCtx,
+      text: hoverValue,
+      origin: {
+        x: chart.style.crosshair.posOffset.vertical.x + (chart.style.axis.yAxisPos === 'right' ? chart.style.position.right : 0),
+        y: horizPos
+      },
+      originPos: 'left',
+      labelHeight: 20,
+      labelXPadding: 10,
+      font: null,
+      xMax: chart.originWidth,
+      yMax: chart.originHeight,
+      fontColor: '#666',
+      labelBg: '#efefef'
+    });
+  },
+
+  selectDot(chart, e, linked) {
+    // const chart = this
+    if (!e.selectedItem || linked) return;
+    let radius = chart.style.crosshair.selectedPointRadius;
+    chart.style.crosshair.selectedPointColor.forEach((color, index) => {
+      Utils.Draw.Fill(chart.iaCtx, ctx => {
+        ctx.arc(e.selectedItem.x + 0.5, Utils.Coord.linearActual2Display(e.selectedItem[chart.dataSource.series[0].c || chart.dataSource.series[0].valIndex], chart.coord.y) - 1.5, radius[index], 0, 2 * Math.PI);
+      }, color);
+    });
+  },
+
+  dragStart(chart, e, linked) {
+    if (linked) return;
+    chart.state.events.dragStart.x = e.pageX;
+    chart.state.events.dragStart.y = e.pageY;
+    chart.state.events.dragStart.offset = chart.viewport.offset;
+
+    if (chart.state.events.dragStart.x < 0) {
+      chart.state.events.dragStart.x = 0;
+    }
+  },
+
+  dragMove(chart, e, linked) {
+    if (linked || chart.state.events.dragStart.offset === null) return;
+    let offset = chart.state.events.dragStart.x - e.pageX;
+    let newOffset = chart.state.events.dragStart.offset + offset;
+
+    if (offset > 0 && newOffset < chart.style.position.right - chart.style.position.left - chart.viewport.width * 5 || offset < 0 && newOffset > chart.viewport.width * -(chart.dataSource.data.length - 5)) {
+      chart.viewport.offset = newOffset;
+      chart.rerender();
+    }
+  },
+
+  dragEnd(chart, e, linked) {
+    if (linked) return;
+    chart.state.events.dragStart.offset = null;
+    chart.state.events.dragStart.x = null;
+    chart.state.events.dragStart.y = null;
+    chart.state.events.pinchDistance = null;
+    chart.state.events.pinchWidth = null;
+  },
+
+  pinchEvent(pinchPoint, scale) {
+    console.log(pinchPoint, scale);
+  },
+
+  clean(chart, e, linked) {
+    chart.iaCtx.clearRect(0, 0, chart.originWidth, chart.originHeight);
+  }
+
+};
+const getNearest = {
+  scalable(chart, event) {
+    const filterData = chart.filterData.data.map(item => item.x);
+
+    for (let l = filterData.length; l >= 0; l--) {
+      if (Math.abs(event.localX - filterData[l]) <= chart.viewport.width / 2) {
+        return chart.dataSource.data[l + chart.filterData.leftOffset];
+      }
+    }
+  },
+
+  unscalable(chart, event) {
+    // snap to linear chart
+    // let index = ~~((event.localX - chart.style.padding.left) /
+    // ((chart.style.position.right - chart.style.padding.left) /
+    //   chart.coords.length))
+    let rangeIndex = 0; // multiRange charts has diffrent scales in diffrent ratio parts
+
+    if (chart.dataSource.timeRangesRatio) {
+      const widthRatio = chart.dataSource.timeRangesRatio;
+      const width = chart.style.position.right - chart.style.position.left;
+
+      for (let i = 0; i < widthRatio.length; i++) {
+        let ratio = widthRatio[i];
+        let prevRatio = widthRatio.slice(0, i).reduce((acc, x) => acc + x, 0);
+        let left = Math.round(chart.style.position.left + prevRatio * width);
+        let right = Math.round(left + ratio * width);
+
+        if (event.localX >= left && event.localX <= right) {
+          rangeIndex = i;
+          break;
+        }
+      }
+    }
+
+    const filterData = chart.panes.map(pane => pane.paneData); // console.log(filterData,rangeIndex)
+
+    for (let l = filterData[rangeIndex].length - 1; l >= 0; l--) {
+      var halfWidth = (filterData[rangeIndex][1].x - filterData[rangeIndex][0].x) / 2;
+      halfWidth = halfWidth < 1 ? 1 : halfWidth; // console.log(l,filterData[rangeIndex])
+
+      if (Math.abs(event.localX - filterData[rangeIndex][l].x) <= halfWidth) {
+        return filterData[rangeIndex][l];
+      }
+    }
+  }
+
+};
 
 function checkTouchEvents() {
   if ('ontouchstart' in window) {
@@ -1427,9 +1744,6 @@ const mobileTouch = 'onorientationchange' in window && touch; // actually we sho
 
 const android = /Android/i.test(navigator.userAgent);
 const iOS = /iPhone|iPad|iPod|AppleWebKit.+Mobile/i.test(navigator.userAgent);
-function isTouchEvent(event) {
-  return Boolean(event.touches);
-}
 
 function ensureDefined(value) {
   if (value === undefined) {
@@ -1512,6 +1826,10 @@ class MouseEventHandler {
       this._target.addEventListener('mousedown', this._mouseDownHandler.bind(this));
     }
 
+    this._target.addEventListener('wheel', this._onWheelBound, {
+      passive: false
+    });
+
     this._initPinch();
   }
 
@@ -1530,7 +1848,7 @@ class MouseEventHandler {
       }
 
       if (this._handler.pinchEvent !== undefined) {
-        var currentDistance = getDistance(event.touches[0], event.touches[1]);
+        var currentDistance = Utils.Coord.getDistance(event.touches[0], event.touches[1]);
         var scale = currentDistance / this._startPinchDistance;
 
         this._handler.pinchEvent(this._startPinchMiddlePoint, scale);
@@ -1667,6 +1985,43 @@ class MouseEventHandler {
     }
   }
 
+  _onWheelBound(event) {
+    var deltaX = event.deltaX / 100;
+    var deltaY = -(event.deltaY / 100);
+
+    if ((deltaX === 0 || !this._options.handleScroll.mouseWheel) && (deltaY === 0 || !this._options.handleScale.mouseWheel)) {
+      return;
+    }
+
+    if (event.cancelable) {
+      event.preventDefault();
+    }
+
+    switch (event.deltaMode) {
+      case event.DOM_DELTA_PAGE:
+        // one screen at time scroll mode
+        deltaX *= 120;
+        deltaY *= 120;
+        break;
+
+      case event.DOM_DELTA_LINE:
+        // one line at time scroll mode
+        deltaX *= 32;
+        deltaY *= 32;
+        break;
+    }
+
+    console.log('滚轮触发', deltaY);
+
+    if (deltaY !== 0 && this._options.handleScale.mouseWheel) {
+
+      var scrollPosition = event.clientX - this._element.getBoundingClientRect().left; // this.model().zoomTime(scrollPosition, zoomScale);
+
+    }
+
+    if (deltaX !== 0 && this._options.handleScroll.mouseWheel) ;
+  }
+
   _processEvent(event, eventFunc) {
     if (!eventFunc) {
       return;
@@ -1762,68 +2117,60 @@ class MouseEventHandler {
   }
 
   _mouseMoveWithDownHandler(moveEvent) {
-    if ('button' in moveEvent && moveEvent.button !== MouseEventButton.Left) {
-      return;
-    }
+    if ('button' in moveEvent && moveEvent.button !== 0
+    /* Left */
+    ) {
+        return;
+      }
 
     if (this._startPinchMiddlePoint !== null) {
-      return;
-    }
-
-    const isTouch = isTouchEvent(moveEvent);
-
-    if (this._preventDragProcess && isTouch) {
       return;
     } // prevent pinch if move event comes faster than the second touch
 
 
     this._pinchPrevented = true;
+    var preventProcess = false;
 
-    const compatEvent = this._makeCompatEvent(moveEvent);
+    var compatEvent = this._makeCompatEvent(moveEvent);
 
-    const startMouseMovePos = ensure(this._mouseMoveStartPosition);
-    const xOffset = Math.abs(startMouseMovePos.x - compatEvent.pageX);
-    const yOffset = Math.abs(startMouseMovePos.y - compatEvent.pageY);
-    const moveExceededManhattanDistance = xOffset + yOffset > 5;
+    var isTouch = mobileTouch || moveEvent.touches;
 
-    if (!moveExceededManhattanDistance && isTouch) {
-      return;
-    }
+    if (isTouch) {
+      if (this._verticalTouchScroll) {
+        // tslint:disable-next-line:no-shadowed-variable
+        var xOffset_1 = Math.abs((compatEvent.pageX - this._lastTouchPosition.x) * 0.5); // tslint:disable-next-line:no-shadowed-variable
 
-    if (moveExceededManhattanDistance && !this._moveExceededManhattanDistance && isTouch) {
-      // vertical drag is more important than horizontal drag
-      // because we scroll the page vertically often than horizontally
-      const correctedXOffset = xOffset * 0.5; // a drag can be only if touch page scroll isn't allowed
+        var yOffset_1 = Math.abs(compatEvent.pageY - this._lastTouchPosition.y);
 
-      const isVertDrag = yOffset >= correctedXOffset && !this._options.treatVertTouchDragAsPageScroll;
-      const isHorzDrag = correctedXOffset > yOffset && !this._options.treatHorzTouchDragAsPageScroll; // if drag event happened then we should revert preventDefault state to original one
-      // and try to process the drag event
-      // else we shouldn't prevent default of the event and ignore processing the drag event
-
-      if (!isVertDrag && !isHorzDrag) {
-        this._preventDragProcess = true;
+        if (xOffset_1 <= yOffset_1) {
+          preventProcess = true;
+          this._preventDefault = false;
+        } else {
+          this._preventDefault = this._originalPreventDefault;
+        }
       }
+
+      this._lastTouchPosition.x = compatEvent.pageX;
+      this._lastTouchPosition.y = compatEvent.pageY;
     }
 
-    if (moveExceededManhattanDistance) {
-      this._moveExceededManhattanDistance = true; // if manhattan distance is more that 5 - we should cancel click event
+    var startMouseMovePos = ensure(this._mouseMoveStartPosition);
+    var xOffset = Math.abs(startMouseMovePos.x - compatEvent.pageX);
+    var yOffset = Math.abs(startMouseMovePos.y - compatEvent.pageY);
+    this._moveExceededManhattanDistance = this._moveExceededManhattanDistance || xOffset + yOffset > 5;
 
+    if (this._moveExceededManhattanDistance) {
+      // if manhattan distance is more that 5 - we should cancel click event
       this._cancelClick = true;
-
-      if (isTouch) {
-        this._clearLongTapTimeout();
-      }
+    } else if (isTouch) {
+      preventProcess = true;
     }
 
-    if (!this._preventDragProcess) {
-      this._processEvent(compatEvent, this._handler.pressedMouseMoveEvent); // we should prevent default in case of touch only
-      // to prevent scroll of the page
-
-
-      if (isTouch) {
-        preventDefault(moveEvent);
-      }
+    if (!preventProcess) {
+      this._processEvent(compatEvent, this._handler.pressedMouseMoveEvent);
     }
+
+    this._preventDefaultIfNeeded(moveEvent);
   }
 
   _checkPinchState(touches) {
@@ -1915,16 +2262,15 @@ class Chart {
       iaCtxClock: 0,
       midCtxInterval: 0
     };
-    this.linkedCharts = Utils.DataTypes.Set();
+    this.linkedCharts = new Set();
     this.defaults = DEFAULTS() // setting chart properties
-    // let dict = ['viewport', 'pricePrecision', 'style', 'dataStyle', 'dataSource']
     ;
     ['viewport', 'pricePrecision', 'dataStyle', 'style', 'dataSource'].forEach(key => {
       this[key] = pattern[key] || this.defaults[key];
     });
     this.render = new Render();
     this.genStyle();
-    this.events = genEvent(); // this.bindEvents()
+    this.events = genEvent(this, this.dataSource.timeRanges ? 'unscalable' : 'scalable'); // this.bindEvents()
 
     this._mouseEventHandler = new MouseEventHandler(iaCanvasEl, this.events, true, false);
     if (!noRender) this.rerender();
@@ -1999,8 +2345,8 @@ class Chart {
     this.render.drawAdditionalTips.call(this);
     this.state.ready = 1; // rerender all linked charts
 
-    if (this.linkedCharts.length()) {
-      this.linkedCharts.forEach(chart => {
+    if (this.linkedCharts.size) {
+      [...this.linkedCharts].forEach(chart => {
         chart.viewport = this.viewport;
         chart.rerender();
       });
@@ -2010,9 +2356,8 @@ class Chart {
   clean(e, name, force) {
     this.iaCtx.clearRect(0, 0, this.originWidth, this.originHeight); // rerender all linked charts
 
-    if (this.linkedCharts.length() && !force) {
-      this.linkedCharts.forEach(chart => {
-        chart.events.mouseout.clean.call(chart, null, 'clean', true);
+    if (this.linkedCharts.size && !force) {
+      this.linkedCharts.forEach(chart => {// chart.events.mouseout.clean.call(chart, null, 'clean', true)
       });
     }
   }
@@ -2023,4 +2368,12 @@ class Chart {
 
 console.log(Chart.prototype);
 
-export { Chart };
+function linkCharts(...charts) {
+  charts.forEach(chart => {
+    charts.forEach(otherChart => {
+      if (chart !== otherChart) chart.linkedCharts && chart.linkedCharts.add(otherChart);
+    });
+  });
+}
+
+export { Chart, linkCharts };

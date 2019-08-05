@@ -64,6 +64,8 @@ export default class MouseEventHandler {
 		if (!mobileTouch) {
 			this._target.addEventListener('mousedown', this._mouseDownHandler.bind(this))
 		}
+		this._target.addEventListener('wheel', this._onWheelBound, { passive: false });
+
 		this._initPinch()
 	}
 
@@ -81,7 +83,7 @@ export default class MouseEventHandler {
 						return
 				}
 				if (this._handler.pinchEvent !== undefined) {
-						var currentDistance = getDistance(event.touches[0], event.touches[1])
+						var currentDistance = Utils.Coord.getDistance(event.touches[0], event.touches[1])
 						var scale = currentDistance / this._startPinchDistance
 						this._handler.pinchEvent(this._startPinchMiddlePoint, scale)
 				}
@@ -186,6 +188,40 @@ export default class MouseEventHandler {
 		}
 	}
 
+	_onWheelBound(event) {
+
+		var deltaX = event.deltaX / 100;
+		var deltaY = -(event.deltaY / 100);
+		if ((deltaX === 0 || !this._options.handleScroll.mouseWheel) &&
+				(deltaY === 0 || !this._options.handleScale.mouseWheel)) {
+				return;
+		}
+		if (event.cancelable) {
+				event.preventDefault();
+		}
+		switch (event.deltaMode) {
+				case event.DOM_DELTA_PAGE:
+						// one screen at time scroll mode
+						deltaX *= 120;
+						deltaY *= 120;
+						break;
+				case event.DOM_DELTA_LINE:
+						// one line at time scroll mode
+						deltaX *= 32;
+						deltaY *= 32;
+						break;
+		}
+		console.log('滚轮触发', deltaY)
+		if (deltaY !== 0 && this._options.handleScale.mouseWheel) {
+				var zoomScale = Math.sign(deltaY) * Math.min(1, Math.abs(deltaY));
+				var scrollPosition = event.clientX - this._element.getBoundingClientRect().left;
+				// this.model().zoomTime(scrollPosition, zoomScale);
+		}
+		if (deltaX !== 0 && this._options.handleScroll.mouseWheel) {
+				// this.model().scrollChart(deltaX * -80); // 80 is a made up coefficient, and minus is for the "natural" scroll
+		}
+};
+
 	_processEvent(event, eventFunc) {
 		if (!eventFunc) {
 				return
@@ -253,72 +289,50 @@ export default class MouseEventHandler {
 		}
 	}
 
-	_mouseMoveWithDownHandler(moveEvent) {
-		if ('button' in moveEvent && moveEvent.button !== MouseEventButton.Left) {
-			return
+	_mouseMoveWithDownHandler(moveEvent)  {
+		if ('button' in moveEvent && moveEvent.button !== 0 /* Left */) {
+				return
 		}
-
 		if (this._startPinchMiddlePoint !== null) {
-			return
+				return
 		}
-
-		const isTouch = isTouchEvent(moveEvent)
-		if (this._preventDragProcess && isTouch) {
-			return
-		}
-
 		// prevent pinch if move event comes faster than the second touch
 		this._pinchPrevented = true
-
-		const compatEvent = this._makeCompatEvent(moveEvent)
-
-		const startMouseMovePos = ensure(this._mouseMoveStartPosition)
-		const xOffset = Math.abs(startMouseMovePos.x - compatEvent.pageX)
-		const yOffset = Math.abs(startMouseMovePos.y - compatEvent.pageY)
-
-		const moveExceededManhattanDistance = xOffset + yOffset > 5
-
-		if (!moveExceededManhattanDistance && isTouch) {
-			return
+		var preventProcess = false
+		var compatEvent = this._makeCompatEvent(moveEvent)
+		var isTouch = mobileTouch || moveEvent.touches
+		if (isTouch) {
+				if (this._verticalTouchScroll) {
+						// tslint:disable-next-line:no-shadowed-variable
+						var xOffset_1 = Math.abs((compatEvent.pageX - this._lastTouchPosition.x) * 0.5)
+						// tslint:disable-next-line:no-shadowed-variable
+						var yOffset_1 = Math.abs(compatEvent.pageY - this._lastTouchPosition.y)
+						if (xOffset_1 <= yOffset_1) {
+								preventProcess = true
+								this._preventDefault = false
+						}
+						else {
+								this._preventDefault = this._originalPreventDefault
+						}
+				}
+				this._lastTouchPosition.x = compatEvent.pageX
+				this._lastTouchPosition.y = compatEvent.pageY
 		}
-
-		if (moveExceededManhattanDistance && !this._moveExceededManhattanDistance && isTouch) {
-			// vertical drag is more important than horizontal drag
-			// because we scroll the page vertically often than horizontally
-			const correctedXOffset = xOffset * 0.5
-
-			// a drag can be only if touch page scroll isn't allowed
-			const isVertDrag = yOffset >= correctedXOffset && !this._options.treatVertTouchDragAsPageScroll
-			const isHorzDrag = correctedXOffset > yOffset && !this._options.treatHorzTouchDragAsPageScroll
-
-			// if drag event happened then we should revert preventDefault state to original one
-			// and try to process the drag event
-			// else we shouldn't prevent default of the event and ignore processing the drag event
-			if (!isVertDrag && !isHorzDrag) {
-				this._preventDragProcess = true
-			}
+		var startMouseMovePos = ensure(this._mouseMoveStartPosition)
+		var xOffset = Math.abs(startMouseMovePos.x - compatEvent.pageX)
+		var yOffset = Math.abs(startMouseMovePos.y - compatEvent.pageY)
+		this._moveExceededManhattanDistance = this._moveExceededManhattanDistance || xOffset + yOffset > 5
+		if (this._moveExceededManhattanDistance) {
+				// if manhattan distance is more that 5 - we should cancel click event
+				this._cancelClick = true
 		}
-
-		if (moveExceededManhattanDistance) {
-			this._moveExceededManhattanDistance = true
-
-			// if manhattan distance is more that 5 - we should cancel click event
-			this._cancelClick = true
-
-			if (isTouch) {
-				this._clearLongTapTimeout()
-			}
+		else if (isTouch) {
+				preventProcess = true
 		}
-
-		if (!this._preventDragProcess) {
-			this._processEvent(compatEvent, this._handler.pressedMouseMoveEvent)
-
-			// we should prevent default in case of touch only
-			// to prevent scroll of the page
-			if (isTouch) {
-				preventDefault(moveEvent)
-			}
+		if (!preventProcess) {
+				this._processEvent(compatEvent, this._handler.pressedMouseMoveEvent)
 		}
+		this._preventDefaultIfNeeded(moveEvent)
 	}
 
 	_checkPinchState(touches) {

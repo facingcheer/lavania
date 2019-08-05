@@ -41,7 +41,7 @@
     </div>
     <script type="module">
 
-    import { Chart } from "./index.js"
+    import { Chart, linkCharts } from "./index.js"
     (function(){
         var pattern = {
           dataSource: {
@@ -63,6 +63,14 @@
         };
 
         var chart = new Chart(document.getElementById('chart1'), pattern)
+        setTimeout(() => {
+          chart.style.crosshair.dash = [5,5]
+          chart.style.crosshair.labelBg = '#efefef'
+          chart.style.crosshair.labelColor = '#666'
+          linkCharts(chart, chart11)
+          // chart.linkedCharts.add(chart11)
+          chart.rerender()
+        }, 0);
         // console.log(chart)
 
 
@@ -143,8 +151,8 @@
             baseValue: 1.06
           }
         };
-
         var chart2= new Chart(document.getElementById('chart2'), pattern2)
+
 
         var pattern3 = {
           dataSource: {
@@ -184,6 +192,10 @@
         // chart3.style.axis.lineColor = 'transparent'
         // chart3.rerender()
         console.log(chart3)
+
+        setTimeout(() => {
+          linkCharts(chart2, chart3)
+        }, 0);
     })()
     </script>
   </body>

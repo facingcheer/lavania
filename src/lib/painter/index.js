@@ -5,11 +5,11 @@ import columnPainter from './columnPainter'
 import panesColumnPainter from './panesColumnPainter'
 import mountainPainter from './mountainPainter'
 
-export default {
+export const chartPainter = {
   line: linePainter,
   candlestick: candlestickPainter,
   OHLC: ohlcPainter,
   column: columnPainter,
   panesColumn: panesColumnPainter,
-  mountain: mountainPainter
+  mountain: mountainPainter,
 }
