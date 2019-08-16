@@ -3,11 +3,9 @@ const Draw = {
     ctx.save()
     ctx.beginPath()
     func(ctx)
-
   },
   Fill(ctx, func, style) {
     Draw.Basic(ctx, func)
-
     ctx.fillStyle = style || 'black'
     ctx.fill()
     ctx.closePath()
@@ -15,16 +13,13 @@ const Draw = {
   },
   Stroke(ctx, func, style) {
     Draw.Basic(ctx, func)
-
     ctx.strokeStyle = style || 'black'
     ctx.stroke()
     ctx.closePath()
     ctx.restore()
   },
-
   FillnStroke(ctx, func, fillStyle, strokeStyle) {
     Draw.Basic(ctx, func)
-
     ctx.fillStyle = fillStyle || 'black'
     ctx.strokeStyle = strokeStyle || 'black'
     ctx.fill()

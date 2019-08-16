@@ -1,7 +1,7 @@
 import Draw from '../utils/Draw'
 import Utils from '../Utils'
 
-export default function(ctx, data, coord, seriesConf, bottom) {
+export default function(ctx, data, coord, seriesConf, viewport) {
   let columns = {up: [], down: [], eq: []}
 
   data.forEach((item, index) => {
@@ -23,7 +23,7 @@ export default function(ctx, data, coord, seriesConf, bottom) {
 
   // a股K线下面的图换成矩形画法
   var coordY = seriesConf.linearMode ? {actual: [0, coord.y.actual[1]], display: coord.y.display} : coord.y
-  const half = Utils.Coord.halfcandleWidth(coord.viewport.width)
+  const half = Utils.Coord.halfcandleWidth(coord.viewport.barWidth)
   for (var direction in columns){
     Draw.FillnStroke(ctx, ctx => {
       columns[direction].forEach((item) => {
@@ -38,13 +38,7 @@ export default function(ctx, data, coord, seriesConf, bottom) {
             ~~coordY.display[0] + 0.5,
             half * 2,
             ~~(Utils.Coord.linearActual2Display(item[seriesConf.valIndex], coordY) -
-            ~~coordY.display[0]) + 0.02) // + 0.02 is for IE fix
-
-            // ctx.rect(~~(item.x - (coord.viewport.width - 4) / 2) + 0.5,
-            // ~~coord.y.display[1] + 0.5,
-            // coord.viewport.width - 4,
-            // ~~(Utils.Coord.linearActual2Display(item[seriesConf.valIndex], coordY) -
-            // ~~coord.y.display[1]) + 0.02) // + 0.02 is for IE fix
+            ~~coordY.display[0]) + 0.02)
         }
       })
     }, seriesConf.style.column.block[direction], seriesConf.style.column.border[direction])

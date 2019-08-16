@@ -1,12 +1,13 @@
 const DEFAULTS = function(){
   return {
-    viewport: {offset: 0, width: 10},    // 图表显示的视野, width表示单个数据元素占用宽度
-    pricePrecision: 5,    // 设定的数据精度,
-    dateFormatPattern: 'MM/DD HH:mm',
+    type: 'unscalable',
+    viewport: {offset: 0, barWidth: 10},    // 图表显示的视野, width表示单个数据元素占用宽度
     style: {
+      pricePrecision: 3,    // 设定的数据精度,
+      dateFormatPattern: 'MM/DD HH:mm',
       font: {family: 'Microsoft YaHei', size: 14},
       padding: {top: 1, right: 70, bottom: 28, left: 1},    // 设定4周数据轴区域的大小
-      wheelZoomStep: 1,    // 设定鼠标滚轮滚动单步调整的大小
+      wheelZoomSpeed: 5,    // 设定鼠标滚轮滚动单步调整的大小
       linearLastPoint: false,    // 绘制当前价的闪烁点
       tip: {
         highColor: '#FF4040',    // 最高价颜色

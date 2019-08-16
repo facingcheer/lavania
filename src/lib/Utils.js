@@ -235,7 +235,7 @@ const Utils = {
     },
 
     dataFilterByViewport(data, viewport, style) {
-      var displayWidth = style.position.right - style.padding.left
+      var displayWidth = viewport.right - viewport.left
       var result = []
       var pointerX = viewport.offset
       var leftOffset = Number.MAX_VALUE
@@ -243,14 +243,14 @@ const Utils = {
       for (var l = data.length; l--;) {
         data[l].x = null
         if (pointerX >= -30 && pointerX <= displayWidth + 30) {
-          data[l].x = displayWidth - pointerX + style.padding.left
+          data[l].x = displayWidth - pointerX + viewport.left
           result.unshift(data[l])
           if (l > rightOffset)
             rightOffset = l
           if (l < leftOffset)
             leftOffset = l
         }
-        pointerX += viewport.width
+        pointerX += viewport.barWidth
       }
 
       return {
@@ -433,12 +433,12 @@ const Utils = {
      * @param {* style config for chart} style
      * @param {* baseValue for symmetry chart} baseValue
      */
-    adjustYRange(yRange, touchTop, style, baseValue, pricePrecision) {
+    adjustYRange(yRange, touchTop, style, viewport, baseValue) {
        // calc the vertical padding of grid
       let [yMin, yMax] = yRange
       if (!touchTop) {
         const verticalPadding = Utils.Coord.linearPixels2Actual(style.grid.span.y, {
-          display: [style.position.bottom, style.padding.top],
+          display: [viewport.bottom, viewport.top],
           actual: [yMin, yMax]
         })
         yMin -= verticalPadding
@@ -455,7 +455,7 @@ const Utils = {
 
       if (yActual[0] === yActual[1]) {
         let offset = yActual[0] / 100
-        yActual[0] -= offset || 1 /Math.pow(10, pricePrecision)
+        yActual[0] -= offset || 1 /Math.pow(10, style.pricePrecision)
         yActual[1] += offset || 0.001 // maybe better generate by precision
       }
 

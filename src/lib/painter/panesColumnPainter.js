@@ -3,7 +3,7 @@ import Utils from '../Utils'
 
 export default function(ctx, panes, coord, seriesConf, bottom) {
   const columns = {up: [], down: [], eq: []}
-I ;panes.forEach((pane, paneIndex) => {
+  panes.forEach((pane, paneIndex) => {
     pane.paneData.forEach((item, bIndex) => {
       let val = item[seriesConf.valIndex]
       if(!bIndex) item.isFirst = true

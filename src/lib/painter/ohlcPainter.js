@@ -32,5 +32,5 @@ function drawOHLC(ctx, OHLC, columnWidth, ohlcColor) {
 export default function(ctx, data, coord, seriesConf) {
   const OHLC = calcOHLC(data, coord, seriesConf)
   console.log('OHLC',coord)
-  drawOHLC(ctx, OHLC, coord.viewport.width, seriesConf.style.OHLC)
+  drawOHLC(ctx, OHLC, coord.viewport.barWidth, seriesConf.style.OHLC)
 }

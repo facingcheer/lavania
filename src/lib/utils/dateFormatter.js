@@ -12,6 +12,7 @@ const MAP = {
 	ss: 'getSeconds',
 	fff: 'getMilliseconds'
 }
+
 export default function (date, pattern, custom) {
 	let parts=[], offset=0
 

@@ -25,7 +25,7 @@ export default {
     // calc the vertical padding of grid
     if (!this.dataSource.touchTop) {
       var verticalPadding = Utils.Coord.linearPixels2Actual(self.style.grid.span.y * 2, {
-        display: [this.style.position.bottomPos, this.style.padding.top],
+        display: [this.viewport.bottomPos, this.style.padding.top],
         actual: [yMin, yMax]
       })
       yMin -= verticalPadding
@@ -43,11 +43,11 @@ export default {
 
     // create coord
     this.coord = {
-      x: {display: [this.style.padding.left, this.style.position.right],
+      x: {display: [this.style.padding.left, this.viewport.right],
           actual: [this.dataSource.timeRanges[0][0], this.dataSource.timeRanges[this.dataSource.timeRanges.length - 1][1]]},
-      y: {display: [this.style.position.bottomPos, this.style.padding.top], actual: yActual},
+      y: {display: [this.viewport.bottomPos, this.style.padding.top], actual: yActual},
       viewport: this.viewport,
-      coordWidth: (this.style.position.right- this.style.padding.left) / this.dataSource.timeRanges.length
+      coordWidth: (this.viewport.right- this.style.padding.left) / this.dataSource.timeRanges.length
     }
 
     // each splitted coord
@@ -56,7 +56,7 @@ export default {
       var right = left + self.coord.coordWidth
 
       if (self.dataSource.timeRangesRatio) {
-        var width = self.style.position.right- self.style.padding.left
+        var width = self.viewport.right- self.style.padding.left
         var prevRatio = self.dataSource.timeRangesRatio.slice(0, index).reduce(function(acc, x){return acc + x}, 0)
         left = Math.round(self.style.padding.left + prevRatio * width)
         right = Math.round(left + self.dataSource.timeRangesRatio[index] * width)
@@ -64,7 +64,7 @@ export default {
 
       return {
         x: {display: [left, right], actual: [range[0], range[1]]},
-        y: {display: [self.style.position.bottomPos, self.style.padding.top], actual: yActuals[index]}
+        y: {display: [self.viewport.bottomPos, self.style.padding.top], actual: yActuals[index]}
       }
     })
 
@@ -120,7 +120,7 @@ export default {
     Util.Draw.Stroke(this.ctx, function(ctx){
       horizLines.forEach(function(y, index){
         ctx.moveTo(self.style.padding.left, y.display)
-        ctx.lineTo(self.style.position.right, y.display)
+        ctx.lineTo(self.viewport.right, y.display)
       })
     }, this.style.grid.color.x)
     this.coord.horizLines = horizLines
@@ -132,7 +132,7 @@ export default {
       // vertical grid line drawing for linear chart
       this.dataSource.timeRanges.forEach(function(range, index){
           if (self.dataSource.timeRangesRatio) {
-            var width = self.style.position.right- self.style.padding.left
+            var width = self.viewport.right- self.style.padding.left
             var widthRatio = self.dataSource.timeRangesRatio
             var prevRatio = widthRatio.slice(0, index).reduce(function(acc, x){return acc + x}, 0)
             var ratio = widthRatio[index]
@@ -145,7 +145,7 @@ export default {
             verticalLines.push({display: ~~(self.style.padding.left + self.coord.coordWidth * index) + 0.5, actual: range[0]})
 
             if (index === self.dataSource.timeRanges.length - 1){
-              verticalLines.push({display: self.style.position.right+ 0.5, actual: range[1]})
+              verticalLines.push({display: self.viewport.right+ 0.5, actual: range[1]})
             }
           }
 
@@ -155,9 +155,9 @@ export default {
 
     } else {
       // vertical grid line drawing for candlestick chart
-      for (var l = this.dataSource.data.length - 1; l >= 0 ; l -= ~~(this.style.grid.span.x / this.viewport.width)){
+      for (var l = this.dataSource.data.length - 1; l >= 0 ; l -= ~~(this.style.grid.span.x / this.viewport.barWidth)){
         if (this.dataSource.data[l].x > this.style.padding.left &&
-            this.dataSource.data[l].x < this.style.position.right)
+            this.dataSource.data[l].x < this.viewport.right)
           verticalLines.push({display: ~~this.dataSource.data[l].x + 0.5, actual: this.dataSource.data[l][self.dataSource.series[0].t]})
       }
     }
@@ -166,7 +166,7 @@ export default {
     Util.Draw.Stroke(this.ctx, function(ctx){
       verticalLines.forEach(function(val, ind){
         ctx.moveTo(val.display, self.style.padding.top)
-        ctx.lineTo(val.display, self.style.position.bottomPos)
+        ctx.lineTo(val.display, self.viewport.bottomPos)
       })
     }, this.style.grid.color.y)
 
