@@ -12,14 +12,13 @@ export default class EventHandler {
 
   _init(){
 		this._hammer.get('pinch').set({ enable: true })
+		this._hammer.on('pinchstart', this.makeEventHander('pinchStartEvent', true), { passive: false })
+		this._hammer.on('pinchmove',  this.makeEventHander('pinchMoveEvent', true), { passive: false })
+		this._hammer.on('pinchend',  this.makeEventHander('pinchEndEvent', true), { passive: false })
 
     this._hammer.on('panstart', this.makeEventHander('panStartEvent', true))
 		this._hammer.on('panmove',  this.makeEventHander('panMoveEvent', true))
 		this._hammer.on('panend',  this.makeEventHander('panEndEvent', true))
-
-		this._hammer.on('pinchstart', this.makeEventHander('pinchStartEvent', true), { passive: false })
-		this._hammer.on('pinchmove',  this.makeEventHander('pinchMoveEvent', true), { passive: false })
-		this._hammer.on('pinchend',  this.makeEventHander('pinchEndEvent', true), { passive: false })
 
     this._target.addEventListener('mousemove', this.makeEventHander('mouseMoveEvent'))
     this._target.addEventListener('mouseleave', this.makeEventHander('mouseLeaveEvent'))
@@ -28,9 +27,6 @@ export default class EventHandler {
 
 	makeEventHander(eventName, isHammer = false) {
 		return function(e) {
-			// if(eventName === 'pinchMoveEvent'){
-			// 	console.log('pinch')
-			// }
 			if (event.cancelable) {
 				event.preventDefault()
 			}

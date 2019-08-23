@@ -2,87 +2,117 @@
 <!--[if lt IE 7]>      <html class="no-js lt-ie9 lt-ie8 lt-ie7"> <![endif]-->
 <!--[if IE 7]>         <html class="no-js lt-ie9 lt-ie8"> <![endif]-->
 <!--[if IE 8]>         <html class="no-js lt-ie9"> <![endif]-->
-<!--[if gt IE 8]><!--> <html class="no-js"> <!--<![endif]-->
-  <head>
-    <meta charset="utf-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <title></title>
-    <meta name="description" content="">
-    <!-- <meta name="viewport" content="width=device-width, initial-scale=1">
+<!--[if gt IE 8]><!-->
+<html class="no-js">
+<!--<![endif]-->
+
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <title></title>
+  <meta name="description" content="">
+  <!-- <meta name="viewport" content="width=device-width, initial-scale=1">
      -->
-     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1">
-     <script src="./datasource.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1">
+  <script src="./datasource.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/ajv/6.10.2/ajv.bundle.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/hint.css/2.6.0/hint.base.min.css">
 
-    <link rel="stylesheet" href="">
-  </head>
-  <style>
+  <link href="./jsoneditor.min.css" rel="stylesheet" type="text/css">
+  <script src="./jsoneditor.min.js"></script>
+</head>
+<style>
+  body {
+    margin: 0;
+    padding: 0;
+    font-size: 16px;
+    /* line-height: 1px; */
+    text-align: center;
+    -webkit-text-size-adjust: none;
+    max-width: 100%;
+    overflow-x: hidden;
+    vertical-align: top;
+    font-family: Arial, Helvetica, sans-serif;
+  }
 
-    body{
-        margin: 0;
-        padding: 0;
-        font-size: 16px;
-        line-height: 1px;
-        text-align: center;
-        -webkit-text-size-adjust: none;
-        max-width: 100%;
-        overflow-x: hidden;
-        vertical-align: top;
-        font-family: Arial,Helvetica,sans-serif;
-      }
+  .chart {
+    width: 800px;
+    height: 600px;
+    position: relative;
+  }
 
-      .chart{
-        width: 800px;
-        height: 600px;
-        position: relative;
-      }
-      .minichart{
-        width: 800px;
-        height: 200px;
-        position: relative;
-        margin-bottom: 100px;
-        /* top: -28px; */
-      }
-      @media screen and (max-width: 500px) {
-        .cc{
-          width: 300px;
-        }
-        .chart{
-          width: 300px;
-          height: 300px;
-          position: relative;
-        }
-        .minichart{
-          width: 300px;
-          height: 100px;
-          position: relative;
-          margin-bottom: 100px;
-          /* top: -28px; */
-        }
-      }
-  </style>
-  <body>
-    <!--[if lt IE 7]>
+  .minichart {
+    width: 800px;
+    height: 200px;
+    position: relative;
+    margin-bottom: 100px;
+    /* top: -28px; */
+  }
+
+  @media screen and (max-width: 500px) {
+    .cc {
+      width: 300px;
+    }
+
+    .chart {
+      width: 300px;
+      height: 300px;
+      position: relative;
+    }
+
+    .minichart {
+      width: 300px;
+      height: 100px;
+      position: relative;
+      margin-bottom: 100px;
+      /* top: -28px; */
+    }
+  }
+  .main{
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+  }
+  .chart-main{
+    width: 800px;
+  }
+  .configure{
+    width: 700px;
+    height: 800px;
+  }
+  /* .jsoneditor-tree .jsoneditor-value{
+    border: 1px solid #333;
+  } */
+</style>
+
+<body>
+  <!--[if lt IE 7]>
       <p class="browsehappy">You are using an <strong>outdated</strong> browser. Please <a href="#">upgrade your browser</a> to improve your experience.</p>
     <![endif]-->
-    <!-- <div class="main"></div> -->
-    <div id="chart1" class="chart">
+  <!-- <div class="main"></div> -->
+  <div class="main">
+    <div class="chart-main">
+      <div id="chart1" class="chart">
 
       </div>
-    <div id="chart11" class="minichart">
+      <div id="chart11" class="minichart">
 
       </div>
-    <div id="chart2" class="chart">
+      <div id="chart2" class="chart">
 
+      </div>
+      <div id="chart3" class="minichart"></div>
     </div>
-  <div id="chart3" class="minichart"></div>
-  <script type="module">
+    <div ID="configure" class="configure">
+    </div>
+  </div>
 
-      import { Chart, linkCharts } from "../dist/index.js"
+  <script type="module">
+    import { Chart, linkCharts } from "../dist/index.esm.bundle.js"
       (function(){
           var pattern = {
             type: 'scalable',
-            dataSource: {
-              data: window.fake_data,
+            seriesInfo: {
               timeIndex: 0,
               series: [
                 // {name: '分时图', type: 'line', valIndex: 2},
@@ -99,23 +129,90 @@
             }
           };
 
-          var chart = new Chart(document.getElementById('chart1'), pattern)
-          setTimeout(() => {
-            chart.style.crosshair.dash = [5,5]
-            chart.style.crosshair.labelBg = '#efefef'
-            chart.style.crosshair.labelColor = '#666'
-            linkCharts(chart, chart11)
-            // chart.linkedCharts.add(chart11)
-            // chart.rerender()
-          }, 0);
+          var chart = new Chart(document.getElementById('chart1'), window.fake_data, pattern)
+
+          chart.updateOption({
+            zoomSpeed: 2,
+            crosshair: {
+              dash: [5,5],
+              labelBg: '#efefef',
+              labelColor: '#666'
+            }
+          })
+
+          // setTimeout(() => {
+          //   chart.style.crosshair.dash = [5,5]
+          //   chart.style.crosshair.labelBg = '#efefef'
+          //   chart.style.crosshair.labelColor = '#666'
+          //   linkCharts(chart, chart11)
+          //   // chart.linkedCharts.add(chart11)
+          //   // chart.rerender()
+          // }, 0);
+
           console.log(chart)
 
+        var container = document.getElementById("configure")
+        var options = {
+            // ajv: Ajv({ allErrors: true, verbose: true }),
+            mode: 'tree',
+            schema: chart.schema,
+            onEditable: (node) => {
+              // node is an object like:
+              //   {
+              //     field: 'FIELD',
+              //     value: 'VALUE',
+              //     path: ['PATH', 'TO', 'NODE']
+              //   }
+              switch (node.field) {
+                case 'type':
+                  return false
+
+                default:
+                  return {
+                  field: false,
+                  value: true
+                }
+              }
+            },
+            colorPicker: true,
+            onChange() {
+              console.log(1)
+              chart.updateOption(editor.get())
+            },
+            onChangeText() {
+              console.log(111)
+              // applyHint()
+            }
+          };
+        var editor = new JSONEditor(container, options)
+        editor.set(chart.style)
+
+        function applyHint() {
+          Array.prototype.forEach.call(document.querySelectorAll('.jsoneditor-field'), (el)=> {
+            if(el.getAttribute('title')) {
+              el.setAttribute('aria-label', el.getAttribute('title'))
+              el.setAttribute('title', '')
+              if(!el.classList.contains('hint--medium')){
+                el.classList.add('hint--medium')
+              }
+              if(!el.classList.contains('hint--bottom')){
+                el.classList.add('hint--bottom')
+              }
+            }
+          })
+        }
+
+        document.addEventListener('click', e => {
+          if(e.target.classList.contains('jsoneditor-button')){
+            applyHint()
+          }
+        })
+        applyHint()
 
           var pattern11 = {
             type: 'scalable',
-            dataSource: {
+            seriesInfo: {
               touchTop: true,
-              data: window.fake_data.map(d => {d.push(~~(Math.random() * 1000 + 100)); return d}),
               timeIndex: 0,
               series: [
                 // {name: '均线', type: 'line', t: 0, valIndex: 9, color: 'orange', lineWidth: 1},
@@ -145,21 +242,41 @@
               offset: 0
             }
           }
-          var chart11 = new Chart(document.getElementById('chart11'), pattern11)
-          setTimeout(() => {
-            chart11.style.grid.color.x = 'transparent'
-            chart11.style.grid.color.y = 'transparent'
-            chart11.style.axis.labelColor = 'transparent'
-            chart11.rerender()
-          }, 0);
+          var chart11 = new Chart(document.getElementById('chart11'), window.fake_data.map(d => {d.push(~~(Math.random() * 1000 + 100)); return d}), pattern11)
+          // setTimeout(() => {
+          //   chart11.style.grid.color.x = 'transparent'
+          //   chart11.style.grid.color.y = 'transparent'
+          //   chart11.style.axis.labelColor = 'transparent'
+          //   chart11.rerender()
+          // }, 0);
+          chart11.updateOption({
+            grid: {
+              color: {
+                x: 'transparent',
+                y: 'transparent'
+              }
+            },
+            axis: {
+              label: {
+                right: {
+                  show: false
+                },
+                bottom: {
+                  show: false
+                }
+              }
+            }
+          })
 
-          console.log(chart11)
+          linkCharts(chart, chart11)
+
+
+
 
 
           var pattern2 = {
-            dataSource: {
+            seriesInfo: {
               // touchTop: true,
-              data: window.fake_data,
               timeIndex: 0,
               series: [
                 {name: '分时图', type: 'line', valIndex: 2, main:true},
@@ -189,13 +306,12 @@
               baseValue: 1.06
             }
           };
-          var chart2= new Chart(document.getElementById('chart2'), pattern2)
+          var chart2= new Chart(document.getElementById('chart2'), window.fake_data, pattern2)
 
 
           var pattern3 = {
-            dataSource: {
+            seriesInfo: {
               touchTop: true,
-              data: window.fake_data,
               timeIndex: 0,
               series: [
                 // {name: '均线', type: 'line', t: 0, valIndex: 9, color: 'orange', lineWidth: 1},
@@ -226,11 +342,12 @@
               baseValue: 1.06
             }
           };
-          var chart3 = new Chart(document.getElementById('chart3'), pattern3)
+          var chart3 = new Chart(document.getElementById('chart3'),window.fake_data, pattern3)
           setTimeout(() => {
             linkCharts(chart2, chart3)
           }, 0);
       })()
       </script>
-  </body>
+</body>
+
 </html>

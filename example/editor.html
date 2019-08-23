@@ -1,0 +1,43 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+  <title>JSONEditor | Basic usage</title>
+
+  <link href="./jsoneditor.min.css" rel="stylesheet" type="text/css">
+  <script src="./jsoneditor.min.js"></script>
+
+  <style type="text/css">
+    #jsoneditor {
+      width: 500px;
+      height: 500px;
+    }
+  </style>
+</head>
+<body>
+<div id="jsoneditor"></div>
+
+<script>
+  // create the editor
+  var container = document.getElementById('jsoneditor');
+  var options = {
+    mode: 'tree',
+    onEditable: () => ({
+      field: false,
+      value: true
+    }),
+    onChange() {
+
+    }
+  };
+  var json = {
+    'array': [1, 2, 3],
+    'boolean': true,
+    'null': null,
+    'number': 123,
+    'object': {'a': 'b', 'c': 'd'},
+    'string': 'Hello World'
+  };
+  var editor = new JSONEditor(container, options, json);
+</script>
+</body>
+</html>

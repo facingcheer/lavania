@@ -1,37 +1,41 @@
-import Utils from './Utils'
+import merge from 'lodash/merge'
+
 import DEFAULTS from '../conf/default'
-// import render from './render.old'
+
+import Utils from './Utils'
+import throttle from './utils/throttle'
+
 import Render from './Render.js'
 import { genEvent } from './Events.js'
-import throttle from './utils/throttle'
 import DataProvider from './DataProvider'
-
 import EventHandler from './EventHandler'
+import schema from '../conf/schema'
 
-
+const genContext = Symbol()
+const genCanvasLayer = Symbol()
+const painter = Symbol()
 
 class Chart {
   constructor(container, dataSource, options) {
     // prevent same data for different charts
-    dataSource.data = JSON.parse(JSON.stringify(dataSource.data))
-    Utils.Safe.dataCheck(dataSource)
-    this.dataSource = dataSource
+    this.dataSource = JSON.parse(JSON.stringify(dataSource))
+    // Utils.Safe.dataCheck(dataSource)
+    //  = dataSource
 
-    const { canvasEl, iaCanvasEl} = this.genCanvasLayer(container)
+    const { canvasEl, iaCanvasEl} = this[genCanvasLayer](container)
 
     this.originWidth = canvasEl.width
     this.originHeight = canvasEl.height
 
-    this.ctx = this.genCtx(canvasEl)
-    this.iaCtx = this.genCtx(iaCanvasEl)
+    this.ctx = this[genContext](canvasEl)
+    this.iaCtx = this[genContext](iaCanvasEl)
 
     this.linkedCharts = new Set
-    this.defaults = DEFAULTS()
 
-    // setting chart properties
-    ;['type', 'viewport', 'dataStyle', 'style'].forEach((key) => {
-      this[key] = options[key] || this.defaults[key]
-    })
+    const defaults = DEFAULTS()
+    this.style = merge(defaults, options)
+    this.schema = schema
+    this.seriesInfo = options.seriesInfo
 
     this.confirmType()
 
@@ -40,16 +44,25 @@ class Chart {
     this.dataProvider = new DataProvider(this.dataSource, this.type, this)
     this.render = new Render(this)
 
-    if(!this.repaint) {
-      this.repaint = throttle(this.painter, 16)
+    if(!this.rerender) {
+      this.rerender = throttle(this[painter], 16)
     }
 
     this.rerender()
+
     this.events = genEvent(this, this.type)
     this.EventHandler = new EventHandler(container, this.events)
   }
 
-  genCanvasLayer(container) {
+  updateOption(newOpt) {
+    this.style = merge(this.style, newOpt)
+    this.confirmType()
+    this.genStyle()
+    this.dataProvider && this.dataProvider.produce()
+    this.rerender()
+  }
+
+  [genCanvasLayer](container) {
     const canvasMain = document.createElement('canvas')
     const canvasIa = document.createElement('canvas')
 
@@ -72,7 +85,7 @@ class Chart {
     }
   }
 
-  genCtx(canvasEl) {
+  [genContext](canvasEl) {
     const dpr = window ? window.devicePixelRatio : 1
     const ctx = canvasEl.getContext('2d')
     canvasEl.style.width = (canvasEl.clientWidth || canvasEl.width) + 'px'
@@ -87,23 +100,20 @@ class Chart {
     this.ctx.font = this.style.font.size + 'px ' + this.style.font.family
     this.iaCtx.font = this.ctx.font
 
-    this.viewport = Object.assign({}, this.viewport, {
+    this.viewport = Object.assign({}, this.style.viewport, {
       left: this.style.padding.left,
       top: this.style.padding.top,
       right: this.originWidth - this.style.padding.right,
       bottom: this.originHeight - this.style.padding.bottom
     })
 
-    this.dataSource.series.map(s => {
-      s.style = s.style || this.dataStyle
+    this.seriesInfo.series.map(s => {
+      s.style = s.style || this.style.seriesStyle
     })
   }
-  rerender(force){
-    this.dataProvider && this.dataProvider.produce()
-    this.repaint(force)
-  }
 
-  painter(force) {
+  [painter](linked, force) {
+    this.dataProvider && this.dataProvider.produce()
     this.clean()
 
     Utils.Draw.Fill(this.ctx, (ctx) => {
@@ -113,7 +123,7 @@ class Chart {
     this.render.rend()
 
     // rerender all linked charts
-    if (this.linkedCharts.size && !force){
+    if (this.linkedCharts.size && !linked){
       [...this.linkedCharts].forEach(chart => {
         chart.viewport.offset = this.viewport.offset
         chart.viewport.barWidth = this.viewport.barWidth
@@ -123,7 +133,8 @@ class Chart {
   }
 
   confirmType() {
-    if((this.dataSource.timeRanges && this.dataSource.timeRanges.length > 1 ) && this.type === 'scalable') {
+    this.type = this.style.type
+    if((this.seriesInfo.timeRanges && this.seriesInfo.timeRanges.length > 1 ) && this.style.type === 'scalable') {
       this.type = 'unscalable'
       throw 'multi timeRanges chart cannot be scalable'
     }

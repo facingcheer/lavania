@@ -1,6 +1,7 @@
 import Utils from './Utils'
 import Draw from './utils/Draw'
 import { chartPainter } from './painter/index'
+import dateFormatter from './utils/dateFormatter'
 
 
 export default class Render {
@@ -21,31 +22,49 @@ export default class Render {
 
     // draw horizontal lines
     // debugger
-    const hLines = style.axis.hideBorder ? coord.horizLines.slice(1,-1) : coord.horizLines
+    const hLines = coord.horizLines.slice(1,-1)
+    // console.log(hLines)
     if (coord.horizLines) {
       Draw.Stroke(ctx, ctx => {
         hLines.forEach((y, index) => {
-          ctx.moveTo(style.padding.left, y.display)
-          ctx.lineTo(viewport.right, y.display)
+          let ypos = index === hLines.length - 1 ? y.display : y.display - 1
+          ctx.moveTo(viewport.left, ypos)
+          ctx.lineTo(viewport.right, ypos)
         })
       }, style.grid.color.x)
     }
 
-    const vLines = style.axis.hideBorder ? coord.verticalLines.slice(1,-1) : coord.verticalLines
+    const vLines = coord.verticalLines
     // draw vertical lines
     if(coord.verticalLines){
       Draw.Stroke(ctx, ctx => {
         vLines.forEach((val, ind) => {
-          ctx.moveTo(val.display, style.padding.top)
+          ctx.moveTo(val.display, viewport.top)
           ctx.lineTo(val.display, viewport.bottom)
         })
       }, style.grid.color.y)
     }
+
+    if(style.axis.showBorder) {
+      Draw.Stroke(ctx, ctx => {
+        ctx.moveTo(viewport.left + 0.5, viewport.top)
+        ctx.lineTo(viewport.left + 0.5, viewport.bottom)
+
+        ctx.moveTo(viewport.right - 0.5, viewport.top)
+        ctx.lineTo(viewport.right - 0.5, viewport.bottom)
+
+        ctx.moveTo(viewport.left, viewport.top + 0.5)
+        ctx.lineTo(viewport.right, viewport.top + 0.5)
+
+        ctx.moveTo(viewport.left, viewport.bottom - 0.5)
+        ctx.lineTo(viewport.right, viewport.bottom - 0.5)
+      }, style.axis.borderColor)
+    }
   }
 
   drawSeries() {
-    const { type, ctx, dataProvider, viewport, dataSource } = this._chart
-    const { series, valueIndex } = dataSource
+    const { type, ctx, dataProvider, viewport, dataSource, seriesInfo } = this._chart
+    const { series, valueIndex } = seriesInfo
     const { coord, filteredData, panes} = dataProvider
 
    series.map(s => {
@@ -64,192 +83,151 @@ export default class Render {
   }
 
   drawAxis() {
-    const {ctx, style, dataProvider, dataSource, dataStyle, originHeight, originWidth, viewport } = this._chart
+    const {type, ctx, style, dataProvider, dataSource, seriesInfo, originHeight, originWidth, viewport } = this._chart
     const { coord } = dataProvider
     this.axisClean()
-
-    let yAxis = {
-    }
-    let xAxis = {}
-
-    // flag用来标识刻度的朝向
-    yAxis.flag = style.axis.yAxisPos === 'right' ? 1 : -1
-    xAxis.flag = style.axis.xAxisPos === 'bottom' ? 1 : -1
-    // start position of the aXis
-    yAxis.xStart = ~yAxis.flag ? viewport.right : 0
-    xAxis.yStart = ~xAxis.flag ? viewport.bottom : style.padding.top
-    yAxis.scaleStart = ~yAxis.flag ? viewport.right : style.padding.left
-
-
-    // draw axis lines
-    Draw.Stroke(ctx, ctx => {
-      if (style.axis.showScale) {
-        coord.horizLines.forEach(hl => {
-          ctx.moveTo(yAxis.scaleStart, hl.display)
-          ctx.lineTo(yAxis.scaleStart + style.axis.scaleLength * yAxis.flag , hl.display)
-        })
-
-        coord.verticalLines.forEach(vl => {
-          ctx.moveTo(vl.display, xAxis.yStart)
-          ctx.lineTo(vl.display, xAxis.yStart + style.axis.scaleLength * xAxis.flag)
-        })
-
-        ctx.moveTo(yAxis.scaleStart + 0.5, style.padding.top)
-        ctx.lineTo(yAxis.scaleStart + 0.5, viewport.bottom)
-
-        ctx.moveTo(style.padding.left, xAxis.yStart + 0.5)
-        ctx.lineTo(viewport.right, xAxis.yStart + 0.5)
-      }
-
-      // draw axis line
-
-      if (style.axis.showBorder) {
-        ctx.moveTo(yAxis.scaleStart + 0.5, style.padding.top)
-        ctx.lineTo(yAxis.scaleStart + 0.5, viewport.bottom)
-
-        ctx.moveTo(style.padding.left, xAxis.yStart + 0.5)
-        ctx.lineTo(viewport.right, xAxis.yStart + 0.5)
-
-        const xOp = ~yAxis.flag ? style.padding.left : viewport.right
-        ctx.moveTo(xOp + 0.5, style.padding.top + 0.5)
-        ctx.lineTo(xOp + 0.5, viewport.bottom +0.5)
-
-        const yOp = ~xAxis.flag? style.padding.top : viewport.bottom
-        ctx.moveTo(style.padding.left, yOp + 0.5 )
-        ctx.lineTo(viewport.right, yOp + 0.5 )
-      }
-
-      if (style.axis.showRate) {
-        var rateX = yAxis.flag > 0 ? style.padding.left : viewport.right
-
-        ctx.moveTo(rateX + 0.5, style.padding.top)
-        ctx.lineTo(rateX + 0.5, viewport.bottom)
-
-        coord.horizLines.forEach((y) => {
-          ctx.moveTo(rateX, y.display)
-          ctx.lineTo(rateX + style.axis.scaleLength * -yAxis.flag, y.display)
-        })
-      }
-    }, style.axis.lineColor)
 
     // draw labels
     var rates = {
       up: [],
       down: []
     }
-    Draw.Text(ctx, (ctx) => {
-      coord.horizLines.forEach((y, index) => {
-        const val = y.actual.toFixed(style.pricePrecision)
-        const xOffset = style.axis.labelPos.yAxis.x
 
-        var yPos = y.display + style.axis.labelPos.yAxis.y
-        if (yPos < 10)
-          yPos += 10
-        if (yPos > originHeight - 10)
-          yPos -= 10
+      // y-axis label
+    ;['left', 'right'].forEach(direction => {
+      if(style.axis.label[direction].show){
+        Draw.Text(ctx, ctx => {
+          coord.horizLines.forEach((y, index) => {
+            const val = Utils.Math.valueFormat(y.actual, style.valueFormatter, style.valuePrecision)
+            const xOffset = style.axis.label[direction].offset.x
 
-        ctx.fillText(val,
-          yAxis.xStart + style.axis.scaleLength + xOffset,
-          yPos)
-      })
-
-      if (!dataSource.timeRanges) {
-        coord.verticalLines.forEach((x) => {
-          ctx.fillText(Utils.Coord.getDateStr(x.actual, style.axis.hideCandlestickDate, style.axis.hideCandlestickTime),
-            x.display + style.axis.labelPos.xAxis.x + ((style.axis.hideCandlestickDate || style.axis.hideCandlestickTime) && 15),
-            xAxis.yStart + style.axis.labelPos.xAxis.y * xAxis.flag)
-        })
-      } else {
-        dataSource.timeRanges.forEach((range, index) => {
-          var width = viewport.right - style.padding.left
-          var displayRange = [
-            index * width / dataSource.timeRanges.length,
-            (index + 1) * width / dataSource.timeRanges.length
-          ]
-          if (dataSource.timeRangesRatio) {
-            var widthRatio = dataSource.timeRangesRatio
-            var prevRatio = widthRatio.slice(0, index).reduce( (acc, x) => {
-              return acc + x
-            }, 0)
-            var ratio = widthRatio[index]
-            var left = Math.round(style.padding.left + prevRatio * width)
-            var right = Math.round(left + ratio * width)
-            displayRange = [left, right]
-          }
-
-          ctx.fillText(Utils.Coord.getDateStr(range[0], true),
-            displayRange[0] + 5,
-            xAxis.yStart + style.axis.labelPos.xAxis.y * xAxis.flag)
-
-          var strWidth = ctx.measureText(Utils.Coord.getDateStr(range[1], true)).width
-          ctx.fillText(Utils.Coord.getDateStr(range[1], true),
-            displayRange[1] - strWidth - 5,
-            xAxis.yStart + style.axis.labelPos.xAxis.y * xAxis.flag)
-        })
+            var yPos = y.display + style.axis.label[direction].offset.y
+            if (yPos < 10)
+              yPos += 10
+            if (yPos > originHeight - 10)
+              yPos -= 10
+            ctx.font = style.axis.label[direction].fontSize + 'px ' + style.font.family
+            ctx.textAlign = style.axis.label[direction].textAlign
+            ctx.textBaseline = style.axis.label[direction].textBaseline
+            ctx.fillText(val,
+              viewport[direction] + ('right' === style.axis.label[direction].textAlign ? -1 : 1) * (style.axis.showScale ? style.axis.scaleLength : 0) + xOffset,
+              yPos + style.axis.label[direction].offset.y)
+          })
+        }, style.axis.label[direction].color)
       }
+    })
 
+    ;['top', 'bottom'].forEach(direction => {
+      if(style.axis.label[direction].show){
+        if (type === 'scalable') {
+          // scalable
+          Draw.Text(ctx, ctx => {
+            ctx.font = style.axis.label[direction].fontSize + 'px ' + style.font.family
+            ctx.textAlign = style.axis.label[direction].textAlign
+            ctx.textBaseline = style.axis.label[direction].textBaseline
+            coord.verticalLines.forEach(x => {
+              ctx.fillText(dateFormatter(x.actual, style.dateFormat),
+                x.display + style.axis.label[direction].offset.x,
+                viewport[direction] + ('bottom' === style.axis.label[direction].textBaseline ? -1 : 1) * (style.axis.showScale ? style.axis.scaleLength : 0) + style.axis.label[direction].offset.y)
+            })
+          }, style.axis.label[direction].color)
+        } else {
+          seriesInfo.timeRanges.forEach((range, index) => {
+            var width = viewport.right - style.padding.left
+            var displayRange = [
+              index * width / seriesInfo.timeRanges.length,
+              (index + 1) * width / seriesInfo.timeRanges.length
+            ]
+            if (seriesInfo.timeRangesRatio) {
+              var widthRatio = seriesInfo.timeRangesRatio
+              var prevRatio = widthRatio.slice(0, index).reduce( (acc, x) => {
+                return acc + x
+              }, 0)
+              var ratio = widthRatio[index]
+              var left = Math.round(style.padding.left + prevRatio * width)
+              var right = Math.round(left + ratio * width)
+              displayRange = [left, right]
+            }
+            Draw.Text(ctx, ctx => {
+              ctx.font = style.axis.label[direction].fontSize + 'px ' + style.font.family
+              ctx.textAlign = style.axis.label[direction].textAlign
+              ctx.textBaseline = style.axis.label[direction].textBaseline
+              ctx.fillText(dateFormatter(range[0], style.dateFormat),
+                displayRange[0] + 5,
+                viewport[direction] + ('bottom' === style.axis.label[direction].textBaseline ? -1 : 1) * (style.axis.showScale ? style.axis.scaleLength : 0) + style.axis.label[direction].offset.y)
 
-      if (style.axis.showRate) {
-        var rateX = yAxis.flag > 0 ? 0 : viewport.right
+              let lastDateStr = dateFormatter(range[1], style.dateFormat)
 
-        coord.horizLines.forEach((y, index) => {
-          var val = ((y.actual - dataSource.baseValue) / dataSource.baseValue)
-          var xOffset = ctx.measureText(val.toFixed(2) + '%').width + style.axis.labelPos.yAxis.x
-
-          var yPos = y.display + style.axis.labelPos.yAxis.y
-          if (yPos < 10)
-            yPos += 10
-          if (yPos > originHeight - 10)
-            yPos -= 10
-
-          if (val === 0)
-            ctx.fillText(val.toFixed(2) + '%',
-              rateX + style.axis.scaleLength + xOffset * yAxis.flag,
-              yPos)
-          else {
-            rates[val > 0 ? 'up' : 'down'].push([(val * 100).toFixed(2) + '%',
-              rateX + style.axis.scaleLength + xOffset * yAxis.flag,
-              yPos
-            ])
-          }
-        })
-
+              var strWidth = ctx.measureText(lastDateStr).width
+              ctx.fillText(lastDateStr,
+                displayRange[1] - strWidth - 5,
+                viewport[direction] + ('bottom' === style.axis.label[direction].textBaseline ? -1 : 1) * (style.axis.showScale ? style.axis.scaleLength : 0) + style.axis.label[direction].offset.y)
+            }, style.axis.label[direction].color)
+          })
+        }
       }
+    })
 
-    }, style.axis.labelColor)
+    // Draw.Text(ctx, ctx => {
+    //   if (style.axis.showRate) {
+    //     var rateX = yAxis.flag > 0 ? 0 : viewport.right
+
+    //     coord.horizLines.forEach((y, index) => {
+    //       var val = ((y.actual - seriesInfo.baseValue) / seriesInfo.baseValue)
+    //       var xOffset = ctx.measureText(val.toFixed(2) + '%').width + style.axis.label.yAxis.offset.x
+
+    //       var yPos = y.display + style.axis.label.yAxis.offset.y
+    //       if (yPos < 10)
+    //         yPos += 10
+    //       if (yPos > originHeight - 10)
+    //         yPos -= 10
+
+    //       if (val === 0)
+    //         ctx.fillText(val.toFixed(2) + '%',
+    //           rateX + style.axis.scaleLength + xOffset * yAxis.flag,
+    //           yPos)
+    //       else {
+    //         rates[val > 0 ? 'up' : 'down'].push([(val * 100).toFixed(2) + '%',
+    //           rateX + style.axis.scaleLength + xOffset * yAxis.flag,
+    //           yPos
+    //         ])
+    //       }
+    //     })
+    //   }
+    // }, style.axis.labelColor)
 
     for (var direction in rates) {
       Draw.Text(ctx, (ctx) => {
         rates[direction].forEach((item) => {
           ctx.fillText(item[0], item[1], item[2])
         })
-      }, dataStyle.OHLC[direction])
+      }, style.seriesStyle.OHLC[direction])
     }
   }
 
   drawAdditionalTips() {
-    const { dataSource, ctx, style, dataProvider, dataStyle, viewport } = this._chart
+    const { seriesInfo, dataSource, ctx, style, dataProvider, viewport } = this._chart
     const { filteredData, coord } = dataProvider
-    if (dataSource.timeRanges !== undefined &&
-        dataSource.baseValue !== undefined){
-      var y = ~~Utils.Coord.linearActual2Display(dataSource.baseValue, coord.y)
+    if (seriesInfo.timeRanges !== undefined &&
+        seriesInfo.baseValue !== undefined){
+      var y = ~~Utils.Coord.linearActual2Display(seriesInfo.baseValue, coord.y)
       Draw.Stroke(ctx, ctx => {
         ctx.lineWidth = 2
         ctx.setLineDash([5,5])
         ctx.moveTo(style.padding.left, y)
         ctx.lineTo(viewport.right, y)
-      }, dataStyle.baseValue)
+      }, style.seriesStyle.baseValue)
     }
 
     // draw current price
-    const mainSeries = dataSource.series.find(s => s.main)
+    const mainSeries = seriesInfo.series.find(s => s.main)
 
-    if (dataSource.data.length > 0){
+    if (dataSource.length > 0){
       if (mainSeries){
 
         const x = style.axis.yAxisPos === 'right' ? viewport.right : 0
         const width = style.axis.yAxisPos === 'right' ? style.padding.right : style.padding.left
-        const last = dataSource.data[dataSource.data.length - 1]
+        const last = dataSource[dataSource.length - 1]
         const value = last[mainSeries.c || mainSeries.valIndex]
         const y = ~~Utils.Coord.linearActual2Display(value, coord.y)
 
@@ -270,16 +248,15 @@ export default class Render {
         }, style.tip.currPrice.labelBg)
 
         Draw.Text(ctx, ctx => {
-          ctx.fillText(value.toFixed(style.pricePrecision),
-                      x + style.axis.scaleLength + style.axis.labelPos.yAxis.x,
+          ctx.fillText(Utils.Math.valueFormat(value, style.valueFormatter, style.valuePrecision),
+                      x + style.axis.scaleLength + style.axis.label.right.offset.x,
                       y + 5)
-
         }, style.tip.currPrice.labelColor)
       }
     }
 
-    // draw highest and lowest price
-    if (style.lastDot.show && mainSeries && filteredData && filteredData.data && filteredData.data.length) {
+    // draw value range boundary
+    if (style.valueRangeBoundary.show && mainSeries && filteredData && filteredData.data && filteredData.data.length) {
       let max = filteredData.data[0]
       let min = filteredData.data[0]
       if (mainSeries.type === 'candlestick' || mainSeries.type === 'OHLC'){
@@ -298,36 +275,51 @@ export default class Render {
           min = item
       })
 
-      const maxVal = max[highIndex].toFixed(style.pricePrecision)
+      const maxVal =  Utils.Math.valueFormat(max[highIndex], style.valueFormatter, style.valuePrecision)
       const maxY = ~~Utils.Coord.linearActual2Display(max[highIndex], coord.y) + 0.5
-      const minVal = min[lowIndex].toFixed(style.pricePrecision)
+      const minVal = Utils.Math.valueFormat(min[lowIndex], style.valueFormatter, style.valuePrecision)
       const minY = ~~Utils.Coord.linearActual2Display(min[lowIndex], coord.y) + 0.5
 
       Draw.Stroke(ctx, ctx => {
-        ctx.setLineDash([5,5])
+        if(style.valueRangeBoundary.dash){
+          ctx.setLineDash(style.valueRangeBoundary.dash)
+        }
         ctx.moveTo(style.padding.left, maxY)
         ctx.lineTo(viewport.right, maxY)
-      }, style.tip.highColor)
+      }, style.valueRangeBoundary.highColor)
 
       Draw.Stroke(ctx, ctx => {
-        ctx.setLineDash([5,5])
+        if(style.valueRangeBoundary.dash){
+          ctx.setLineDash(style.valueRangeBoundary.dash)
+        }
         ctx.moveTo(style.padding.left, minY)
         ctx.lineTo(viewport.right, minY)
-      }, style.tip.lowColor)
+      }, style.valueRangeBoundary.lowColor)
 
-      Draw.Text(ctx, ctx => {
-        const width = ctx.measureText(maxVal).width
-        ctx.fillText(maxVal,
-                     viewport.right + style.axis.scaleLength + style.axis.labelPos.yAxis.x,
-                     maxY + 5)
-      }, style.tip.highColor)
+      ;['left', 'right'].forEach(direction => {
+        if(style.axis.label[direction].show) {
+          Draw.Text(ctx, ctx => {
+            const width = ctx.measureText(maxVal).width
+            ctx.font = style.axis.label[direction].fontSize + 'px ' + style.font.family
+            ctx.textAlign = style.axis.label[direction].textAlign
+            ctx.textBaseline = style.axis.label[direction].textBaseline
+            ctx.fillText(maxVal,
+              viewport[direction] + ('right' === style.axis.label[direction].textAlign ? -1 : 1) * (style.axis.showScale ? style.axis.scaleLength : 0) + style.axis.label[direction].offset.x,
+               maxY)
+          }, style.valueRangeBoundary.highColor)
 
-      Draw.Text(ctx, ctx => {
-        const width = ctx.measureText(minVal).width
-        ctx.fillText(minVal,
-                     viewport.right + style.axis.scaleLength + style.axis.labelPos.yAxis.x,
-                     minY + 5)
-      }, style.tip.lowColor)
+          Draw.Text(ctx, ctx => {
+            const width = ctx.measureText(minVal).width
+            ctx.font = style.axis.label[direction].fontSize + 'px ' + style.font.family
+            ctx.textAlign = style.axis.label[direction].textAlign
+            ctx.textBaseline = style.axis.label[direction].textBaseline
+            ctx.fillText(minVal,
+              viewport[direction] + ('right' === style.axis.label[direction].textAlign ? -1 : 1) * (style.axis.showScale ? style.axis.scaleLength : 0) + style.axis.label[direction].offset.x,
+              minY)
+          }, style.valueRangeBoundary.lowColor)
+        }
+      })
+
     }
   }
   axisClean(chart) {

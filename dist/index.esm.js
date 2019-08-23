@@ -1,11 +1,5 @@
-'use strict';
-
-Object.defineProperty(exports, '__esModule', { value: true });
-
-function _interopDefault (ex) { return (ex && (typeof ex === 'object') && 'default' in ex) ? ex['default'] : ex; }
-
-var merge = _interopDefault(require('lodash/merge'));
-var Hammer = _interopDefault(require('hammerjs'));
+import merge from 'lodash/merge';
+import Hammer from 'hammerjs';
 
 function _classCallCheck(instance, Constructor) {
   if (!(instance instanceof Constructor)) {
@@ -2400,5 +2394,4 @@ function linkCharts() {
   });
 }
 
-exports.Chart = Chart;
-exports.linkCharts = linkCharts;
+export { Chart, linkCharts };

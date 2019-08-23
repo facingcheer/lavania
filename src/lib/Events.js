@@ -117,7 +117,7 @@ const events = {
       // draw horizontal line
       if (!linked) {
         chart.eventInfo.yPos = chart.style.crosshair.snapToClose && chart.eventInfo.selectedItem ?
-          ~~Utils.Coord.linearActual2Display(chart.eventInfo.selectedItem[chart.dataSource.series[0].c || chart.dataSource.series[0].valIndex], chart.dataProvider.coord.y) :
+          ~~Utils.Coord.linearActual2Display(chart.eventInfo.selectedItem[chart.seriesInfo.series[0].c || chart.seriesInfo.series[0].valIndex], chart.dataProvider.coord.y) :
           e.localY
         ctx.moveTo(chart.viewport.left, ~~chart.eventInfo.yPos + fixOffset)
         ctx.lineTo(chart.viewport.right, ~~chart.eventInfo.yPos + fixOffset)
@@ -136,46 +136,50 @@ const events = {
 
     if (!chart.eventInfo.selectedItem) return
     // find the horizontal label width
-    let hoverTime = chart.eventInfo.selectedItem[chart.dataSource.timeIndex]
-    let hoverTimeStr = dateFormatter(hoverTime, '{MM}/{DD} {HH}:{mm}')
+    let hoverTime = chart.eventInfo.selectedItem[chart.seriesInfo.timeIndex]
+
+    let hoverTimeStr = dateFormatter(hoverTime, chart.style.dateFormat)
     textLabelPainter({
       ctx: chart.iaCtx,
       text: hoverTimeStr,
       origin: {
-        x: chart.eventInfo.selectedItem.x,
-        y: chart.style.crosshair.posOffset.horizontal.y + (chart.style.axis.xAxisPos === 'bottom' ? chart.viewport.bottom : chart.viewport.top - chart.style.crosshair.labelHeight)
+        x: chart.style.crosshair.axisLabel.posOffset.horizontal.x + chart.eventInfo.selectedItem.x,
+        y: chart.style.crosshair.axisLabel.posOffset.horizontal.y + (chart.style.crosshair.axisLabel.xAxisLabelPos === 'bottom' ? chart.viewport.bottom : chart.viewport.top - chart.style.crosshair.axisLabel.height)
       },
-      originPos: 'top',
-      labelHeight: 20,
-      labelXPadding: 5,
-      font: null,
-      xMax: chart.originWidth,
-      yMax: chart.originHeight,
-      fontColor: '#666',
-      labelBg: '#efefef'
+      originPos: chart.style.crosshair.axisLabel.xAxisLabelPos === 'bottom' ? 'top' : 'bottom',
+      bound: {
+        xMax: chart.originWidth,
+        yMax: chart.originHeight
+      },
+      style: chart.style.crosshair.axisLabel,
+      font: chart.style.font
     })
 
     if (linked) return
 
     let horizPos = chart.style.crosshair.snapToClose && chart.eventInfo.selectedItem ?
-      ~~Utils.Coord.linearActual2Display(chart.eventInfo.selectedItem[chart.dataSource.series[0].c || chart.dataSource.series[0].valIndex], chart.dataProvider.coord.y) : e.localY
-    let hoverValue = !linked ? Utils.Coord.linearDisplay2Actual(horizPos, chart.dataProvider.coord.y).toFixed(chart.style.pricePrecision) : 0
+      ~~Utils.Coord.linearActual2Display(chart.eventInfo.selectedItem[chart.seriesInfo.series[0].c || chart.seriesInfo.series[0].valIndex], chart.dataProvider.coord.y) : e.localY
+    let hoverValue
+    if(!linked) {
+      hoverValue = Utils.Math.valueFormat(Utils.Coord.linearDisplay2Actual(horizPos, chart.dataProvider.coord.y),chart.style.valueFormatter, chart.style.valuePrecision)
+    } else {
+      hoverValue = 0
+    }
 
     textLabelPainter({
       ctx: chart.iaCtx,
       text: hoverValue,
       origin: {
-        x: chart.style.crosshair.posOffset.vertical.x + (chart.style.axis.yAxisPos === 'right' ? chart.viewport.right : 0),
-        y: horizPos
+        x: chart.style.crosshair.axisLabel.posOffset.vertical.x + (chart.style.crosshair.axisLabel.yAxisLabelPos === 'right' ? chart.viewport.right : 0),
+        y: chart.style.crosshair.axisLabel.posOffset.vertical.y + horizPos
       },
-      originPos: 'left',
-      labelHeight: 20,
-      labelXPadding: 10,
-      font: null,
-      xMax: chart.originWidth,
-      yMax: chart.originHeight,
-      fontColor: '#666',
-      labelBg: '#efefef'
+      originPos: chart.style.crosshair.axisLabel.yAxisLabelPos === 'right' ? 'left' : 'right',
+      bound: {
+        xMax: chart.originWidth,
+        yMax: chart.originHeight
+      },
+      style: chart.style.crosshair.axisLabel,
+      font: chart.style.font
     })
   },
 
@@ -183,11 +187,11 @@ const events = {
     // const chart = this
     if (!chart.eventInfo.selectedItem || linked) return
 
-    let radius = chart.style.crosshair.selectedPointRadius
-    chart.style.crosshair.selectedPointColor.forEach((color, index) => {
+    let radius = chart.style.crosshair.selectedPoint.radius
+    chart.style.crosshair.selectedPoint.color.forEach((color, index) => {
       Utils.Draw.Fill(chart.iaCtx, ctx => {
         ctx.arc(chart.eventInfo.selectedItem.x + 0.5,
-          Utils.Coord.linearActual2Display(chart.eventInfo.selectedItem[chart.dataSource.series[0].c || chart.dataSource.series[0].valIndex], chart.dataProvider.coord.y) - 1.5,
+          Utils.Coord.linearActual2Display(chart.eventInfo.selectedItem[chart.seriesInfo.series[0].c || chart.seriesInfo.series[0].valIndex], chart.dataProvider.coord.y) - 1.5,
           radius[index], 0, 2 * Math.PI)
       }, color)
     })
@@ -205,7 +209,7 @@ const events = {
     // console.log('move', chart.eventInfo.dragStart.offset, e.deltaX, newOffset, chart.viewport.right - chart.viewport.left - chart.viewport.barWidth * 5)
 
     if ((e.deltaX < 0 && newOffset < chart.viewport.right - chart.viewport.left - chart.viewport.barWidth * 5) ||
-      (e.deltaX > 0 && newOffset > chart.viewport.barWidth * -(chart.dataSource.data.length - 5))) {
+      (e.deltaX > 0 && newOffset > chart.viewport.barWidth * -(chart.dataSource.length - 5))) {
       chart.viewport.offset = newOffset
       chart.rerender()
     }
@@ -222,7 +226,7 @@ const events = {
     chart.eventInfo.pinchStart.offset = chart.viewport.offset
     chart.eventInfo.pinchStart.barWidth = chart.viewport.barWidth
     chart.eventInfo.pinchStart.center = e.center
-    let [selectedItem, selectedIndex] = getNearest[chart.dataSource.timeRanges ? 'unscalable' : 'scalable'](chart, e.center.x) || [null, null]
+    let [selectedItem, selectedIndex] = getNearest[chart.seriesInfo.timeRanges ? 'unscalable' : 'scalable'](chart, e.center.x) || [null, null]
     chart.eventInfo.selectedItem = selectedItem
     chart.eventInfo.selectedIndex = selectedIndex
   },
@@ -237,7 +241,7 @@ const events = {
     let zoomScale = e.scale - 1
 
 
-    let offsetIndex = chart.dataSource.data.length - chart.eventInfo.selectedIndex - 1
+    let offsetIndex = chart.dataSource.length - chart.eventInfo.selectedIndex - 1
     const oldBarWidth = chart.eventInfo.pinchStart.barWidth
 
     // const scaleDivision = 100 / chart.style.wheelZoomSpeed
@@ -273,16 +277,16 @@ const events = {
     if (linked) return
     let zoomScale = Math.sign(e.deltaY) * Math.min(1, Math.abs(e.deltaY))
 
-    let [selectedItem, selectedIndex] = getNearest[chart.dataSource.timeRanges ? 'unscalable' : 'scalable'](chart, e.localX) || [null, null]
+    let [selectedItem, selectedIndex] = getNearest[chart.seriesInfo.timeRanges ? 'unscalable' : 'scalable'](chart, e.localX) || [null, null]
     if (!selectedIndex || !selectedItem) {
       console.log('no select')
       return
     }
 
-    let offsetIndex = chart.dataSource.data.length - selectedIndex - 1
+    let offsetIndex = chart.dataSource.length - selectedIndex - 1
     const oldViewport = chart.viewport.barWidth
 
-    const scaleDivision = 100/ chart.style.wheelZoomSpeed
+    const scaleDivision = 100/ chart.style.zoomSpeed
 
     if (chart.viewport.barWidth + oldViewport * (zoomScale / scaleDivision) > 4 && chart.viewport.barWidth + oldViewport * (zoomScale / scaleDivision) < 64) {
       chart.viewport.barWidth += oldViewport * (zoomScale / scaleDivision)
@@ -300,7 +304,7 @@ const getNearest = {
     const filteredData = chart.dataProvider.filteredData.data.map(item => item.x)
     for (let l = filteredData.length; l >= 0; l--) {
       if (Math.abs(xpos - filteredData[l]) <= chart.viewport.barWidth / 2) {
-        return [chart.dataSource.data[l + chart.dataProvider.filteredData.leftOffset], l + chart.dataProvider.filteredData.leftOffset]
+        return [chart.dataSource[l + chart.dataProvider.filteredData.leftOffset], l + chart.dataProvider.filteredData.leftOffset]
       }
     }
     // console.log(event.localX, filteredData, chart.viewport.barWidth)
@@ -309,8 +313,8 @@ const getNearest = {
   unscalable(chart, xpos) {
     let rangeIndex = 0
     // multiRange charts has diffrent scales in diffrent ratio parts
-    if (chart.dataSource.timeRangesRatio) {
-      const widthRatio = chart.dataSource.timeRangesRatio
+    if (chart.seriesInfo.timeRangesRatio) {
+      const widthRatio = chart.seriesInfo.timeRangesRatio
       const width = chart.viewport.right - chart.viewport.left
       for (let i = 0; i < widthRatio.length; i++) {
         let ratio = widthRatio[i]

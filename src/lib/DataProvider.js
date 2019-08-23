@@ -3,14 +3,15 @@ import Utils from './Utils'
 export default class DataProvider {
   constructor(dataSource, chartType, chart) {
     this._dataSource = dataSource
+    this._seriesInfo = chart.seriesInfo
     this._chartType = chartType
     this._chart = chart
     this._panes = null
     this._filteredData = null
-    if(this._dataSource && this._dataSource.data && this._dataSource.data.length) {
+    this._coord = null
+    if(this._dataSource && this._dataSource.length) {
       this.produce()
     }
-    this._coord = null
     // this._filteredData
   }
 
@@ -37,10 +38,9 @@ export default class DataProvider {
 
   genPanes() {
     const { style, viewport } = this._chart
-    const {data, timeIndex, timeRanges, timeRangesRatio } = this._dataSource
+    const {timeIndex, timeRanges, timeRangesRatio } = this._seriesInfo
     let chartWidth = viewport.right - viewport.left
-
-    const paneData = Utils.Coord.datafilterByTimeRanges(data, timeRanges, timeIndex)
+    const paneData = Utils.Coord.datafilterByTimeRanges(this._dataSource, timeRanges, timeIndex)
 
     const paneCoords = timeRanges.map((range, index) => {
       // calc each panes position-x
@@ -50,9 +50,9 @@ export default class DataProvider {
           return acc + x
         }, 0)
         left = Math.round(style.padding.left + prevRatio * chartWidth)
-        right = Math.round(left + this._dataSource.timeRangesRatio[index] * chartWidth)
+        right = Math.round(left + timeRangesRatio[index] * chartWidth)
       } else {
-        const coordWidth = chartWidth / this._dataSource.timeRanges.length
+        const coordWidth = chartWidth / timeRanges.length
         left = style.padding.left + coordWidth * index
         right = left + coordWidth
       }
@@ -67,7 +67,7 @@ export default class DataProvider {
     // calc display position x of each visiable point
     paneData.forEach((pane, index) => {
       pane.forEach(item => {
-        item.x = ~~Utils.Coord.linearActual2Display(item[this._dataSource.timeIndex], paneCoords[index].x)
+        item.x = ~~Utils.Coord.linearActual2Display(item[timeIndex], paneCoords[index].x)
       })
     })
 
@@ -83,18 +83,17 @@ export default class DataProvider {
 
   filterData() {
     const { viewport, style } = this._chart
-    const { data } = this._dataSource
+    // const { data } = this._dataSource
 
-    this._filteredData = Utils.Coord.dataFilterByViewport(data,
+    this._filteredData = Utils.Coord.dataFilterByViewport(this._dataSource,
       viewport, style)
   }
 
   genCoord() {
     // for data with no timeRanges,
     // use offset & width of data to calc data
-    const { viewport, style, dataSource } = this._chart
-    const { series, timeIndex, baseValue, touchTop } = this._dataSource
-
+    const { viewport, style } = this._chart
+    const { series, timeIndex, baseValue, touchTop } = this._seriesInfo
 
     // calculate actual-x-range of data
     let xActual = [
@@ -105,7 +104,7 @@ export default class DataProvider {
     // calculate actual range of data
     let yRange = Utils.Coord.calcYRange(this._filteredData.data, series)
     // yRange的初步处理，有baseValue时对称处理，最大最小值相等时增加差异
-    let yActual = Utils.Coord.adjustYRange(yRange, touchTop, style, viewport, baseValue, style.pricePrecision)
+    let yActual = Utils.Coord.adjustYRange(yRange, touchTop, style, viewport, baseValue)
 
     // create coord
     this._coord = {
@@ -121,7 +120,7 @@ export default class DataProvider {
 
   genHorizLines() {
     const { style } = this._chart
-    const { baseValue, touchTop } = this._dataSource
+    const { baseValue, touchTop } = this._seriesInfo
 
     let yActual = this._coord.y.actual
     let horizCount = Utils.Grid.lineCount(this._coord.y.display, style.grid.limit.y, style.grid.span.y)
@@ -140,7 +139,7 @@ export default class DataProvider {
 
   genVerticalLines() {
     const { style, viewport } = this._chart
-    const { timeIndex } = this._dataSource
+    const { timeIndex } = this._seriesInfo
 
     const verticalLines = []
     if (this._chartType === 'unscalable') {

@@ -6,7 +6,7 @@ export default {
   input: 'src/index.js',
   output: {
     format: 'esm',
-    file: 'dist/index.js'
+    file: 'dist/index.esm.js'
   },
   plugins: [
     resolve(),
@@ -15,5 +15,6 @@ export default {
       extensions: ['.js'],
       exclude: 'node_modules/**'
     })
-  ]
+  ],
+  external: ['dayjs', 'hammerjs', 'lodash/merge']
 }

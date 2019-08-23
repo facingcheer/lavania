@@ -1,40 +1,30 @@
-const RGX = /([^{]*?)\w(?=\})/g
-
-const MAP = {
-	YYYY: 'getFullYear',
-	YY: 'getYear',
-	MM: function (d) {
-		return d.getMonth() + 1
-	},
-	DD: 'getDate',
-	HH: 'getHours',
-	mm: 'getMinutes',
-	ss: 'getSeconds',
-	fff: 'getMilliseconds'
-}
-
-export default function (date, pattern, custom) {
-	let parts=[], offset=0
-
-	pattern.replace(RGX, (key, _, idx) => {
-		// save preceding string
-		parts.push(pattern.substring(offset, idx - 1))
-		offset = idx += key.length + 1
-		// save function
-		parts.push(custom && custom[key] || function (d) {
-			return ('00' + (typeof MAP[key] === 'string' ? d[MAP[key]]() : MAP[key](d))).slice(-key.length)
-		})
-	})
-
-	if (offset !== pattern.length) {
-		parts.push(pattern.substring(offset))
+export default function dateFormatter(date, pattern = 'YYYY-MM-DD HH:mm:ss') {
+	if(!(date instanceof Date)) {
+		date = new Date(date)
 	}
 
-  let out='', i=0
-  let d = typeof date === 'number' ? new Date(date): date
-
-  for (; i<parts.length; i++) {
-      out += (typeof parts[i]==='string') ? parts[i] : parts[i](d)
-  }
-  return out
+  const formatObj = {
+    YYYY: date.getFullYear(),
+    MM: date.getMonth() + 1,
+    DD: date.getDate(),
+    HH: date.getHours(),
+    mm: date.getMinutes(),
+		ss: date.getSeconds()
+	}
+	const patternType = Object.prototype.toString.call(pattern)
+	if(patternType === '[object Function]') {
+		return pattern(date)
+	} else if (patternType === '[object String]') {
+		return pattern.replace(/(YYYY|MM|DD|HH|mm|ss)+/g, (match, p1) => {
+			let value = formatObj[p1]
+			if (match.length > 0 && value < 10) value = `0${value}`
+			return value
+		})
+	} else {
+		return 'YYYY-MM-DD HH:mm:ss'.replace(/(YYYY|MM|DD|HH|mm|ss)+/g, (match, p1) => {
+			let value = formatObj[p1]
+			if (match.length > 0 && value < 10) value = `0${value}`
+			return value
+		})
+	}
 }

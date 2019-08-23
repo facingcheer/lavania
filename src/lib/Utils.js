@@ -64,32 +64,6 @@ const Utils = {
     }
   },
 
-  DataTypes: {
-    Set: function(){
-      var set = function(d){
-        this.d = d || []
-      }
-      set.prototype.insert = function(item){
-        if (this.d.indexOf(item) < 0)
-          this.d.push(item)
-      }
-      set.prototype.remove = function(item){
-        var index = this.d.indexOf(item)
-        if (index > -1)
-          this.d.splice(index, 1)
-      }
-      set.prototype.length = function(){
-        return this.d.length
-      }
-      set.prototype.forEach = function(func){
-        this.d.forEach(func)
-      }
-
-      return function(lst){
-        return new set(lst)
-      }
-    }()
-  },
   Math: {
     sum(lst) {
       var sum = 0
@@ -143,6 +117,16 @@ const Utils = {
     },
     distance(point1, point2) {
       return Math.sqrt(Math.pow(point2[0] - point1[0], 2) + Math.pow(point2[1] - point1[1], 2))
+    },
+    valueFormat(value, formatter, precision = 2) {
+      if (value) {
+        if(formatter && Object.prototype.toString.call(formatter) === '[object Function]') {
+          return formatter(value)
+        } else {
+          return value.toFixed(precision >= 0 ? precision : 0)
+        }
+      }
+      return ''
     }
   },
   Draw: {
@@ -177,13 +161,10 @@ const Utils = {
       ctx.closePath()
       ctx.restore()
     },
-    Text(ctx, func, fillStyle, fontStyle, textBaseline ) {
+    Text(ctx, func, fillStyle, fontStyle ) {
       ctx.save()
       if (fontStyle)
         ctx.font = fontStyle
-
-      if (textBaseline)
-        ctx.textBaseline = textBaseline
 
       ctx.fillStyle = fillStyle || 'black'
       func(ctx)
@@ -455,8 +436,8 @@ const Utils = {
 
       if (yActual[0] === yActual[1]) {
         let offset = yActual[0] / 100
-        yActual[0] -= offset || 1 /Math.pow(10, style.pricePrecision)
-        yActual[1] += offset || 0.001 // maybe better generate by precision
+        yActual[0] -= offset || (style.valuePrecision ? 1 / Math.pow(10, style.valuePrecision) : 0.001)
+        yActual[1] += offset || (style.valuePrecision ? 1 / Math.pow(10, style.valuePrecision) : 0.001) // maybe better generate by precision
       }
 
       return yActual
