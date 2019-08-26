@@ -27,6 +27,6 @@ function drawCandle(ctx, candles, columnWidth, blockColor, borderColor) {
 export default function(ctx, data, coord, seriesConf) {
   const candles = calcOHLC(data, coord, seriesConf)
 
-  drawWicks(ctx, candles, seriesConf.style.candlestick.wick)
-  drawCandle(ctx, candles, coord.viewport.barWidth, seriesConf.style.candlestick.block, seriesConf.style.candlestick.border)
+  drawWicks(ctx, candles, seriesConf.style.wick)
+  drawCandle(ctx, candles, coord.viewport.barWidth, seriesConf.style.block, seriesConf.style.border)
 }

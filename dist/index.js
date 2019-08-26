@@ -914,9 +914,9 @@ function drawCandle(ctx, candles, columnWidth, blockColor, borderColor) {
 }
 
 function candlestickPainter (ctx, data, coord, seriesConf) {
-  var candles = calcOHLC(data, coord, seriesConf);
-  drawWicks(ctx, candles, seriesConf.style.candlestick.wick);
-  drawCandle(ctx, candles, coord.viewport.barWidth, seriesConf.style.candlestick.block, seriesConf.style.candlestick.border);
+  var candles = calcOHLC(data, coord, seriesConf)
+  drawWicks(ctx, candles, seriesConf.style.candlestick.wick)
+  drawCandle(ctx, candles, coord.viewport.barWidth, seriesConf.style.candlestick.block, seriesConf.style.candlestick.border)
 }
 
 function drawOHLC(ctx, OHLC, columnWidth, ohlcColor) {

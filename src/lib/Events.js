@@ -107,7 +107,7 @@ const events = {
     }
 
     if (!chart.eventInfo.selectedItem) return
-
+    const mainSeries = chart.seriesInfo.series.find(s => s.main) || chart.seriesInfo.series[0]
     Utils.Draw.Stroke(chart.iaCtx, ctx => {
       ctx.lineWidth = chart.style.crosshair.lineWidth || 1
       ctx.setLineDash(chart.style.crosshair.dash)
@@ -117,7 +117,7 @@ const events = {
       // draw horizontal line
       if (!linked) {
         chart.eventInfo.yPos = chart.style.crosshair.snapToClose && chart.eventInfo.selectedItem ?
-          ~~Utils.Coord.linearActual2Display(chart.eventInfo.selectedItem[chart.seriesInfo.series[0].c || chart.seriesInfo.series[0].valIndex], chart.dataProvider.coord.y) :
+          ~~Utils.Coord.linearActual2Display(chart.eventInfo.selectedItem[mainSeries[mainSeries.snapToProp] || mainSeries.valIndex || mainSeries.c], chart.dataProvider.coord.y) :
           e.localY
         ctx.moveTo(chart.viewport.left, ~~chart.eventInfo.yPos + fixOffset)
         ctx.lineTo(chart.viewport.right, ~~chart.eventInfo.yPos + fixOffset)
@@ -143,8 +143,8 @@ const events = {
       ctx: chart.iaCtx,
       text: hoverTimeStr,
       origin: {
-        x: chart.style.crosshair.axisLabel.posOffset.horizontal.x + chart.eventInfo.selectedItem.x,
-        y: chart.style.crosshair.axisLabel.posOffset.horizontal.y + (chart.style.crosshair.axisLabel.xAxisLabelPos === 'bottom' ? chart.viewport.bottom : chart.viewport.top - chart.style.crosshair.axisLabel.height)
+        x: chart.style.crosshair.axisLabel.posOffset.xAxisLabel.x + chart.eventInfo.selectedItem.x,
+        y: chart.style.crosshair.axisLabel.posOffset.xAxisLabel.y + (chart.style.crosshair.axisLabel.xAxisLabelPos === 'bottom' ? chart.viewport.bottom : chart.viewport.top - chart.style.crosshair.axisLabel.height)
       },
       originPos: chart.style.crosshair.axisLabel.xAxisLabelPos === 'bottom' ? 'top' : 'bottom',
       bound: {
@@ -158,7 +158,7 @@ const events = {
     if (linked) return
 
     let horizPos = chart.style.crosshair.snapToClose && chart.eventInfo.selectedItem ?
-      ~~Utils.Coord.linearActual2Display(chart.eventInfo.selectedItem[chart.seriesInfo.series[0].c || chart.seriesInfo.series[0].valIndex], chart.dataProvider.coord.y) : e.localY
+      ~~Utils.Coord.linearActual2Display(chart.eventInfo.selectedItem[mainSeries.c || mainSeries.valIndex], chart.dataProvider.coord.y) : e.localY
     let hoverValue
     if(!linked) {
       hoverValue = Utils.Math.valueFormat(Utils.Coord.linearDisplay2Actual(horizPos, chart.dataProvider.coord.y),chart.style.valueFormatter, chart.style.valuePrecision)
@@ -170,8 +170,8 @@ const events = {
       ctx: chart.iaCtx,
       text: hoverValue,
       origin: {
-        x: chart.style.crosshair.axisLabel.posOffset.vertical.x + (chart.style.crosshair.axisLabel.yAxisLabelPos === 'right' ? chart.viewport.right : 0),
-        y: chart.style.crosshair.axisLabel.posOffset.vertical.y + horizPos
+        x: chart.style.crosshair.axisLabel.posOffset.yAxisLabel.x + (chart.style.crosshair.axisLabel.yAxisLabelPos === 'right' ? chart.viewport.right : 0),
+        y: chart.style.crosshair.axisLabel.posOffset.yAxisLabel.y + horizPos
       },
       originPos: chart.style.crosshair.axisLabel.yAxisLabelPos === 'right' ? 'left' : 'right',
       bound: {
@@ -186,12 +186,13 @@ const events = {
   selectDot(chart, e, linked) {
     // const chart = this
     if (!chart.eventInfo.selectedItem || linked) return
+    const mainSeries = chart.seriesInfo.series.find(s => s.main) || chart.seriesInfo.series[0]
 
     let radius = chart.style.crosshair.selectedPoint.radius
     chart.style.crosshair.selectedPoint.color.forEach((color, index) => {
       Utils.Draw.Fill(chart.iaCtx, ctx => {
         ctx.arc(chart.eventInfo.selectedItem.x + 0.5,
-          Utils.Coord.linearActual2Display(chart.eventInfo.selectedItem[chart.seriesInfo.series[0].c || chart.seriesInfo.series[0].valIndex], chart.dataProvider.coord.y) - 1.5,
+          Utils.Coord.linearActual2Display(chart.eventInfo.selectedItem[mainSeries[mainSeries.snapToProp] || mainSeries.valIndex || mainSeries.c], chart.dataProvider.coord.y) - 1.5,
           radius[index], 0, 2 * Math.PI)
       }, color)
     })

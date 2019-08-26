@@ -20,6 +20,21 @@ function _createClass(Constructor, protoProps, staticProps) {
   return Constructor;
 }
 
+function _defineProperty(obj, key, value) {
+  if (key in obj) {
+    Object.defineProperty(obj, key, {
+      value: value,
+      enumerable: true,
+      configurable: true,
+      writable: true
+    });
+  } else {
+    obj[key] = value;
+  }
+
+  return obj;
+}
+
 function _slicedToArray(arr, i) {
   return _arrayWithHoles(arr) || _iterableToArrayLimit(arr, i) || _nonIterableRest();
 }
@@ -987,7 +1002,7 @@ var defineProperty = (function() {
   } catch (e) {}
 }());
 
-var _defineProperty = defineProperty;
+var _defineProperty$1 = defineProperty;
 
 /**
  * The base implementation of `assignValue` and `assignMergeValue` without
@@ -999,8 +1014,8 @@ var _defineProperty = defineProperty;
  * @param {*} value The value to assign.
  */
 function baseAssignValue(object, key, value) {
-  if (key == '__proto__' && _defineProperty) {
-    _defineProperty(object, key, {
+  if (key == '__proto__' && _defineProperty$1) {
+    _defineProperty$1(object, key, {
       'configurable': true,
       'enumerable': true,
       'value': value,
@@ -2210,8 +2225,8 @@ var constant_1 = constant;
  * @param {Function} string The `toString` result.
  * @returns {Function} Returns `func`.
  */
-var baseSetToString = !_defineProperty ? identity_1 : function(func, string) {
-  return _defineProperty(func, 'toString', {
+var baseSetToString = !_defineProperty$1 ? identity_1 : function(func, string) {
+  return _defineProperty$1(func, 'toString', {
     'configurable': true,
     'enumerable': false,
     'value': constant_1(string),
@@ -2414,6 +2429,7 @@ var DEFAULTS = function DEFAULTS() {
       show: true,
       //显示当前范围的价格边界
       dash: [10, 10],
+      lineWidth: 1,
       highColor: '#FF4040',
       // 最高价颜色
       lowColor: '#1EB955' // 最低价颜色
@@ -2458,12 +2474,12 @@ var DEFAULTS = function DEFAULTS() {
         // 十字线标签水平空白间距
         posOffset: {
           // 十字线标签偏移
-          vertical: {
+          yAxisLabel: {
             x: 0,
             y: 0
           },
           // 0 means auto
-          horizontal: {
+          xAxisLabel: {
             x: 0,
             y: 0
           }
@@ -2486,7 +2502,7 @@ var DEFAULTS = function DEFAULTS() {
         }
       },
       // 网格线间隔调整限制
-      color: {
+      lineColor: {
         x: '#f0f0f0',
         y: '#f0f0f0'
       },
@@ -2501,8 +2517,9 @@ var DEFAULTS = function DEFAULTS() {
       showBorder: false,
       // 显示图表border
       borderColor: '#000',
-      showRate: false,
-      // 显示百分比
+      bgColor: 'rgba(0,0,0,0)',
+      // 坐标轴背景色
+      // showRate: false,    // 显示百分比
       label: {
         top: {
           show: false,
@@ -2510,7 +2527,7 @@ var DEFAULTS = function DEFAULTS() {
           fontSize: 12,
           offset: {
             x: 0,
-            y: 0
+            y: 10
           },
           textAlign: 'center',
           // label text align,  Possible values: refrence to CanvasRenderingContext2D.textAlign
@@ -2522,7 +2539,7 @@ var DEFAULTS = function DEFAULTS() {
           color: '#555',
           fontSize: 12,
           offset: {
-            x: 0,
+            x: 10,
             y: 0
           },
           textAlign: 'left',
@@ -2534,7 +2551,7 @@ var DEFAULTS = function DEFAULTS() {
           fontSize: 12,
           offset: {
             x: 0,
-            y: 0
+            y: 10
           },
           textAlign: 'center',
           textBaseline: 'top'
@@ -2544,20 +2561,13 @@ var DEFAULTS = function DEFAULTS() {
           color: '#555',
           fontSize: 12,
           offset: {
-            x: 0,
+            x: 10,
             y: 0
           },
           textAlign: 'left',
           textBaseline: 'middle'
         }
-      },
-      bgColor: 'rgba(0,0,0,0)',
-      // 坐标轴背景色
-      // lineColor: 'rgba(0,0,0,1)',    // 坐标轴线颜色
-      showScale: true,
-      //是否显示刻度
-      scaleLength: 10 // 刻度长度
-
+      }
     },
     seriesStyle: {
       // 关于数据的样式
@@ -2595,6 +2605,13 @@ var DEFAULTS = function DEFAULTS() {
         gradientUp: 'rgba(45,176,249,0.15)',
         // 山形内部渐变色
         gradientDown: 'rgba(19,119,240,0.02)'
+      },
+      line: {
+        // 线
+        lineWidth: 1,
+        // 价格线的粗细
+        lineColor: '#2DB0F9' // 价格线的颜色
+
       },
       column: {
         block: {
@@ -2988,8 +3005,8 @@ var Utils = {
       var yMin = Number.MAX_VALUE;
       data.forEach(function (d) {
         series.forEach(function (s) {
-          var h = d[s.type === 'candlestick' || s.type === 'OHLC' ? s.h : s.valIndex];
-          var l = d[s.type === 'candlestick' || s.type === 'OHLC' ? s.l : s.valIndex];
+          var h = d[s.style === 'candlestick' || s.style === 'OHLC' ? s.h : s.valIndex];
+          var l = d[s.style === 'candlestick' || s.style === 'OHLC' ? s.l : s.valIndex];
           if (h > yMax) yMax = h;
           if (l < yMin) yMin = l;
         });
@@ -3159,7 +3176,7 @@ function linePainter (ctx, data, coord, seriesConf, decorators) {
       if (!index) ctx.moveTo(point.x, point.y);
       ctx.lineTo(point.x, point.y);
     });
-  }, seriesConf.color);
+  }, seriesConf.style.lineColor);
 
   if (decorators && decorators.length) {
     decorators.forEach(function (d) {
@@ -3221,8 +3238,8 @@ function drawCandle(ctx, candles, columnWidth, blockColor, borderColor) {
 
 function candlestickPainter (ctx, data, coord, seriesConf) {
   var candles = calcOHLC(data, coord, seriesConf);
-  drawWicks(ctx, candles, seriesConf.style.candlestick.wick);
-  drawCandle(ctx, candles, coord.viewport.barWidth, seriesConf.style.candlestick.block, seriesConf.style.candlestick.border);
+  drawWicks(ctx, candles, seriesConf.style.wick);
+  drawCandle(ctx, candles, coord.viewport.barWidth, seriesConf.style.block, seriesConf.style.border);
 }
 
 function drawOHLC(ctx, OHLC, columnWidth, ohlcColor) {
@@ -3239,7 +3256,7 @@ function drawOHLC(ctx, OHLC, columnWidth, ohlcColor) {
         ctx.moveTo(~~(ohlc.x - half) + 0.5, ohlc.open);
         ctx.lineTo(ohlc.x, ohlc.open);
         ctx.moveTo(~~(ohlc.x + half) + 0.5, ohlc.close);
-        ctx.lineTo(ohlc.x, ohlc.close); // ctx.rect(~~(ochl.x - half) + 0.5 , ~~Math.min(candle.open, candle.close) + 0.5, half * 2 ,~~Math.abs(candle.open - candle.close)) // + 0.02 is for IE fix
+        ctx.lineTo(ohlc.x, ohlc.close);
       });
     }, ohlcColor[direction]);
   };
@@ -3251,8 +3268,7 @@ function drawOHLC(ctx, OHLC, columnWidth, ohlcColor) {
 
 function ohlcPainter (ctx, data, coord, seriesConf) {
   var OHLC = calcOHLC(data, coord, seriesConf);
-  console.log('OHLC', coord);
-  drawOHLC(ctx, OHLC, coord.viewport.barWidth, seriesConf.style.OHLC);
+  drawOHLC(ctx, OHLC, coord.viewport.barWidth, seriesConf.style);
 }
 
 function columnPainter (ctx, data, coord, seriesConf, viewport) {
@@ -3283,7 +3299,7 @@ function columnPainter (ctx, data, coord, seriesConf, viewport) {
           ctx.rect(~~(item.x - half) + 0.5, ~~coordY.display[0] + 0.5, half * 2, ~~(Utils.Coord.linearActual2Display(item[seriesConf.valIndex], coordY) - ~~coordY.display[0]) + 0.02);
         }
       });
-    }, seriesConf.style.column.block[direction], seriesConf.style.column.border[direction]);
+    }, seriesConf.style.block[direction], seriesConf.style.border[direction]);
   }
 }
 
@@ -3340,8 +3356,8 @@ function mountainPainter (ctx, data, coord, seriesConf) {
   decorators.push(function gradientDecorator(points, seriesConf) {
     // draw gradient
     var gradient = ctx.createLinearGradient(0, 0, 0, coord.y.display[0] - coord.y.display[1]);
-    gradient.addColorStop(0, seriesConf.style.mountain.gradientUp);
-    gradient.addColorStop(1, seriesConf.style.mountain.gradientDown);
+    gradient.addColorStop(0, seriesConf.style.gradientUp);
+    gradient.addColorStop(1, seriesConf.style.gradientDown);
     Draw.Fill(ctx, function (ctx) {
       ctx.moveTo(points[0].x, coord.y.display[0]);
       points.forEach(function (point, index) {
@@ -3434,7 +3450,7 @@ function () {
             ctx.moveTo(viewport.left, ypos);
             ctx.lineTo(viewport.right, ypos);
           });
-        }, style.grid.color.x);
+        }, style.grid.lineColor.x);
       }
 
       var vLines = coord.verticalLines; // draw vertical lines
@@ -3445,7 +3461,7 @@ function () {
             ctx.moveTo(val.display, viewport.top);
             ctx.lineTo(val.display, viewport.bottom);
           });
-        }, style.grid.color.y);
+        }, style.grid.lineColor.y);
       }
 
       if (style.axis.showBorder) {
@@ -3470,24 +3486,34 @@ function () {
           dataProvider = _this$_chart2.dataProvider,
           viewport = _this$_chart2.viewport,
           dataSource = _this$_chart2.dataSource,
-          seriesInfo = _this$_chart2.seriesInfo;
+          seriesInfo = _this$_chart2.seriesInfo,
+          style = _this$_chart2.style;
       var series = seriesInfo.series,
           valueIndex = seriesInfo.valueIndex;
       var coord = dataProvider.coord,
           filteredData = dataProvider.filteredData,
           panes = dataProvider.panes;
       series.map(function (s) {
-        if (s.type === 'line' || s.type === 'mountain' || s.type === 'candlestick' || s.type === 'OHLC') {
-          chartPainter[s.type](ctx, filteredData.data, coord, s, viewport);
+        var seriesConf;
+
+        if (s.seriesType && chartPainter[s.seriesType] && s.seriesType !== 'column') {
+          seriesConf = Object.assign({}, s, {
+            style: style.seriesStyle[s.seriesType]
+          });
+          chartPainter[s.seriesType](ctx, filteredData.data, coord, seriesConf, viewport);
         }
 
-        if (s.type === 'column') {
+        if (s.seriesType === 'column') {
+          seriesConf = Object.assign({}, s, {
+            style: style.seriesStyle[s.seriesType]
+          });
+
           if (type === 'unscalable') {
-            chartPainter.panesColumn(ctx, panes, coord, s, viewport);
+            chartPainter.panesColumn(ctx, panes, coord, seriesConf, viewport);
           }
 
           if (type === 'scalable') {
-            chartPainter.column(ctx, filteredData.data, coord, s, viewport);
+            chartPainter.column(ctx, filteredData.data, coord, seriesConf, viewport);
           }
         }
       });
@@ -3525,7 +3551,7 @@ function () {
               ctx.font = style.axis.label[direction].fontSize + 'px ' + style.font.family;
               ctx.textAlign = style.axis.label[direction].textAlign;
               ctx.textBaseline = style.axis.label[direction].textBaseline;
-              ctx.fillText(val, viewport[direction] + ('right' === style.axis.label[direction].textAlign ? -1 : 1) * (style.axis.showScale ? style.axis.scaleLength : 0) + xOffset, yPos + style.axis.label[direction].offset.y);
+              ctx.fillText(val, viewport[direction] + xOffset, yPos + style.axis.label[direction].offset.y);
             });
           }, style.axis.label[direction].color);
         }
@@ -3539,7 +3565,7 @@ function () {
               ctx.textAlign = style.axis.label[direction].textAlign;
               ctx.textBaseline = style.axis.label[direction].textBaseline;
               coord.verticalLines.forEach(function (x) {
-                ctx.fillText(dateFormatter(x.actual, style.dateFormat), x.display + style.axis.label[direction].offset.x, viewport[direction] + ('bottom' === style.axis.label[direction].textBaseline ? -1 : 1) * (style.axis.showScale ? style.axis.scaleLength : 0) + style.axis.label[direction].offset.y);
+                ctx.fillText(dateFormatter(x.actual, style.dateFormat), x.display + style.axis.label[direction].offset.x, viewport[direction] + style.axis.label[direction].offset.y);
               });
             }, style.axis.label[direction].color);
           } else {
@@ -3562,10 +3588,10 @@ function () {
                 ctx.font = style.axis.label[direction].fontSize + 'px ' + style.font.family;
                 ctx.textAlign = style.axis.label[direction].textAlign;
                 ctx.textBaseline = style.axis.label[direction].textBaseline;
-                ctx.fillText(dateFormatter(range[0], style.dateFormat), displayRange[0] + 5, viewport[direction] + ('bottom' === style.axis.label[direction].textBaseline ? -1 : 1) * (style.axis.showScale ? style.axis.scaleLength : 0) + style.axis.label[direction].offset.y);
+                ctx.fillText(dateFormatter(range[0], style.dateFormat), displayRange[0] + 5, viewport[direction] + style.axis.label[direction].offset.y);
                 var lastDateStr = dateFormatter(range[1], style.dateFormat);
                 var strWidth = ctx.measureText(lastDateStr).width;
-                ctx.fillText(lastDateStr, displayRange[1] - strWidth - 5, viewport[direction] + ('bottom' === style.axis.label[direction].textBaseline ? -1 : 1) * (style.axis.showScale ? style.axis.scaleLength : 0) + style.axis.label[direction].offset.y);
+                ctx.fillText(lastDateStr, displayRange[1] - strWidth - 5, viewport[direction] + style.axis.label[direction].offset.y);
               }, style.axis.label[direction].color);
             });
           }
@@ -3659,7 +3685,7 @@ function () {
         var max = filteredData.data[0];
         var min = filteredData.data[0];
 
-        if (mainSeries.type === 'candlestick' || mainSeries.type === 'OHLC') {
+        if (mainSeries.seriesType === 'candlestick' || mainSeries.seriesType === 'OHLC') {
           var highIndex = mainSeries.h;
           var lowIndex = mainSeries.l;
         } else {
@@ -3680,12 +3706,20 @@ function () {
             ctx.setLineDash(style.valueRangeBoundary.dash);
           }
 
+          if (style.valueRangeBoundary.lineWidth) {
+            ctx.lineWidth = style.valueRangeBoundary.lineWidth;
+          }
+
           ctx.moveTo(style.padding.left, maxY);
           ctx.lineTo(viewport.right, maxY);
         }, style.valueRangeBoundary.highColor);
         Draw.Stroke(ctx, function (ctx) {
           if (style.valueRangeBoundary.dash) {
             ctx.setLineDash(style.valueRangeBoundary.dash);
+          }
+
+          if (style.valueRangeBoundary.lineWidth) {
+            ctx.lineWidth = style.valueRangeBoundary.lineWidth;
           }
 
           ctx.moveTo(style.padding.left, minY);
@@ -3698,14 +3732,14 @@ function () {
               ctx.font = style.axis.label[direction].fontSize + 'px ' + style.font.family;
               ctx.textAlign = style.axis.label[direction].textAlign;
               ctx.textBaseline = style.axis.label[direction].textBaseline;
-              ctx.fillText(maxVal, viewport[direction] + ('right' === style.axis.label[direction].textAlign ? -1 : 1) * (style.axis.showScale ? style.axis.scaleLength : 0) + style.axis.label[direction].offset.x, maxY);
+              ctx.fillText(maxVal, viewport[direction] + style.axis.label[direction].offset.x, maxY);
             }, style.valueRangeBoundary.highColor);
             Draw.Text(ctx, function (ctx) {
               var width = ctx.measureText(minVal).width;
               ctx.font = style.axis.label[direction].fontSize + 'px ' + style.font.family;
               ctx.textAlign = style.axis.label[direction].textAlign;
               ctx.textBaseline = style.axis.label[direction].textBaseline;
-              ctx.fillText(minVal, viewport[direction] + ('right' === style.axis.label[direction].textAlign ? -1 : 1) * (style.axis.showScale ? style.axis.scaleLength : 0) + style.axis.label[direction].offset.x, minY);
+              ctx.fillText(minVal, viewport[direction] + style.axis.label[direction].offset.x, minY);
             }, style.valueRangeBoundary.lowColor);
           }
         });
@@ -3965,6 +3999,9 @@ var events = {
     }
 
     if (!chart.eventInfo.selectedItem) return;
+    var mainSeries = chart.seriesInfo.series.find(function (s) {
+      return s.main;
+    }) || chart.seriesInfo.series[0];
     Utils.Draw.Stroke(chart.iaCtx, function (ctx) {
       ctx.lineWidth = chart.style.crosshair.lineWidth || 1;
       ctx.setLineDash(chart.style.crosshair.dash); // verticalPos = e.localX
@@ -3972,7 +4009,7 @@ var events = {
       var fixOffset = ctx.lineWidth % 2 ? 0.5 : 0; // draw horizontal line
 
       if (!linked) {
-        chart.eventInfo.yPos = chart.style.crosshair.snapToClose && chart.eventInfo.selectedItem ? ~~Utils.Coord.linearActual2Display(chart.eventInfo.selectedItem[chart.seriesInfo.series[0].c || chart.seriesInfo.series[0].valIndex], chart.dataProvider.coord.y) : e.localY;
+        chart.eventInfo.yPos = chart.style.crosshair.snapToClose && chart.eventInfo.selectedItem ? ~~Utils.Coord.linearActual2Display(chart.eventInfo.selectedItem[mainSeries[mainSeries.snapToProp] || mainSeries.valIndex || mainSeries.c], chart.dataProvider.coord.y) : e.localY;
         ctx.moveTo(chart.viewport.left, ~~chart.eventInfo.yPos + fixOffset);
         ctx.lineTo(chart.viewport.right, ~~chart.eventInfo.yPos + fixOffset);
       }
@@ -3993,8 +4030,8 @@ var events = {
       ctx: chart.iaCtx,
       text: hoverTimeStr,
       origin: {
-        x: chart.style.crosshair.axisLabel.posOffset.horizontal.x + chart.eventInfo.selectedItem.x,
-        y: chart.style.crosshair.axisLabel.posOffset.horizontal.y + (chart.style.crosshair.axisLabel.xAxisLabelPos === 'bottom' ? chart.viewport.bottom : chart.viewport.top - chart.style.crosshair.axisLabel.height)
+        x: chart.style.crosshair.axisLabel.posOffset.xAxisLabel.x + chart.eventInfo.selectedItem.x,
+        y: chart.style.crosshair.axisLabel.posOffset.xAxisLabel.y + (chart.style.crosshair.axisLabel.xAxisLabelPos === 'bottom' ? chart.viewport.bottom : chart.viewport.top - chart.style.crosshair.axisLabel.height)
       },
       originPos: chart.style.crosshair.axisLabel.xAxisLabelPos === 'bottom' ? 'top' : 'bottom',
       bound: {
@@ -4005,7 +4042,7 @@ var events = {
       font: chart.style.font
     });
     if (linked) return;
-    var horizPos = chart.style.crosshair.snapToClose && chart.eventInfo.selectedItem ? ~~Utils.Coord.linearActual2Display(chart.eventInfo.selectedItem[chart.seriesInfo.series[0].c || chart.seriesInfo.series[0].valIndex], chart.dataProvider.coord.y) : e.localY;
+    var horizPos = chart.style.crosshair.snapToClose && chart.eventInfo.selectedItem ? ~~Utils.Coord.linearActual2Display(chart.eventInfo.selectedItem[mainSeries.c || mainSeries.valIndex], chart.dataProvider.coord.y) : e.localY;
     var hoverValue;
 
     if (!linked) {
@@ -4018,8 +4055,8 @@ var events = {
       ctx: chart.iaCtx,
       text: hoverValue,
       origin: {
-        x: chart.style.crosshair.axisLabel.posOffset.vertical.x + (chart.style.crosshair.axisLabel.yAxisLabelPos === 'right' ? chart.viewport.right : 0),
-        y: chart.style.crosshair.axisLabel.posOffset.vertical.y + horizPos
+        x: chart.style.crosshair.axisLabel.posOffset.yAxisLabel.x + (chart.style.crosshair.axisLabel.yAxisLabelPos === 'right' ? chart.viewport.right : 0),
+        y: chart.style.crosshair.axisLabel.posOffset.yAxisLabel.y + horizPos
       },
       originPos: chart.style.crosshair.axisLabel.yAxisLabelPos === 'right' ? 'left' : 'right',
       bound: {
@@ -4033,10 +4070,13 @@ var events = {
   selectDot: function selectDot(chart, e, linked) {
     // const chart = this
     if (!chart.eventInfo.selectedItem || linked) return;
+    var mainSeries = chart.seriesInfo.series.find(function (s) {
+      return s.main;
+    }) || chart.seriesInfo.series[0];
     var radius = chart.style.crosshair.selectedPoint.radius;
     chart.style.crosshair.selectedPoint.color.forEach(function (color, index) {
       Utils.Draw.Fill(chart.iaCtx, function (ctx) {
-        ctx.arc(chart.eventInfo.selectedItem.x + 0.5, Utils.Coord.linearActual2Display(chart.eventInfo.selectedItem[chart.seriesInfo.series[0].c || chart.seriesInfo.series[0].valIndex], chart.dataProvider.coord.y) - 1.5, radius[index], 0, 2 * Math.PI);
+        ctx.arc(chart.eventInfo.selectedItem.x + 0.5, Utils.Coord.linearActual2Display(chart.eventInfo.selectedItem[mainSeries[mainSeries.snapToProp] || mainSeries.valIndex || mainSeries.c], chart.dataProvider.coord.y) - 1.5, radius[index], 0, 2 * Math.PI);
       }, color);
     });
   },
@@ -7189,98 +7229,475 @@ function () {
   return EventHandler;
 }();
 
-var schema = {
-  title: 'chart-config',
-  description: 'lavania config',
-  type: 'object',
-  required: ['type'],
-  properties: {
-    type: {
-      description: 'chart type, use scalable to define a chart that can be zoomed or paned, if scalable is defined, series.timeRanges will be ignored. use unscalable to define a chart can not change viewport',
-      "enum": ['scalable', 'unscalable']
-    },
-    viewport: {
-      description: 'when chart.type is scalable, viewport will used to describe the data viewport',
-      properties: {
-        barWidth: {
-          description: 'width of each data in "px"',
-          type: 'number'
-        },
-        offset: {
-          description: 'x-offset of the chart, change this value will make the init viewport move left or right',
-          type: 'number'
-        }
-      }
-    },
-    valuePrecision: {
-      description: 'price precision for chart label',
-      'data-hint': 'wow',
-      type: 'number'
-    },
-    // valueFormatter: {
-    //   description: 'if valuePrecision is not good enough for need, you can use valueFormatter provide a function to gennerate the priceText from value',
-    //   type: 'function',
-    // },
-    dateFormat: {
-      description: 'dateFormatter to format date, can be datePattern(like "YYYY-MM-DD HH:mm:ss") or a function',
-      type: 'string'
-    },
-    font: {
-      description: 'chart font config',
-      type: 'object',
-      properties: {
-        family: {
-          description: 'font family',
-          type: 'string'
-        },
-        size: {
-          description: 'font size',
-          type: 'number'
-        }
-      }
-    },
-    padding: {
-      description: 'chart padding to canvas container',
-      type: 'object',
-      properties: {
-        left: {
-          description: 'left padding of the canvas container',
-          type: 'number'
-        },
-        right: {
-          description: 'right padding of the canvas container',
-          type: 'number'
-        },
-        top: {
-          description: 'top padding of the canvas container',
-          type: 'number'
-        },
-        bottom: {
-          description: 'bottom padding of the canvas container',
-          type: 'number'
-        }
-      }
-    },
-    zoomSpeed: {
-      description: 'speed for zoom chart when triggled by mouseWheel Event',
-      type: 'number'
-    },
-    valueRangeBoundary: {
-      description: 'lines indicator highest & lowest value in viewport',
-      type: 'object',
-      properties: {
-        show: {
-          description: 'whether show the lines ',
-          type: 'boolean'
-        },
-        dash: {
-          description: 'An Array of numbers that specify distances to alternately draw a line and a gap (in coordinate space units). If the number of elements in the array is odd, the elements of the array get copied and concatenated. For example, [5, 15, 25] will become [5, 15, 25, 5, 15, 25]. If the array is empty, the line dash list is cleared and line strokes return to being solid.',
-          type: 'array'
-        }
+var _dash, _properties, _title$title$type$req;
+
+var labelProperty = {
+  show: {
+    title: 'whether show the label',
+    type: 'boolean'
+  },
+  color: {
+    title: 'label font color',
+    type: 'string'
+  },
+  fontSize: {
+    title: 'label font size',
+    type: 'number'
+  },
+  textAlign: {
+    title: 'label text align',
+    description: 'mdn: CanvasRenderingContext2D.textAlign',
+    type: 'string'
+  },
+  textBaseline: {
+    title: 'label textBaseline',
+    description: 'mdn: CanvasRenderingContext2D.textBaseline',
+    type: 'string'
+  },
+  offset: {
+    title: 'position offset for adjust title',
+    type: 'object',
+    properties: {
+      x: {
+        title: 'horizone offset',
+        type: 'number'
+      },
+      y: {
+        title: 'vertical offset',
+        type: 'number'
       }
     }
   }
 };
+var updownColorProperty = {
+  up: {
+    title: 'up color',
+    type: 'string'
+  },
+  down: {
+    title: 'down color',
+    type: 'string'
+  }
+};
+var schema = (_title$title$type$req = {
+  title: 'chart-config'
+}, _defineProperty(_title$title$type$req, "title", 'lavania config'), _defineProperty(_title$title$type$req, "type", 'object'), _defineProperty(_title$title$type$req, "required", ['type']), _defineProperty(_title$title$type$req, "properties", {
+  type: {
+    title: 'chart type, use "scalable" to specify a chart that can be zoomed or paned, if scalable is defined, series.timeRanges will be ignored. use "unscalable" to specify a chart can not change viewport',
+    "enum": ['scalable', 'unscalable']
+  },
+  viewport: {
+    title: 'when chart.type is scalable, viewport will used to describe the data viewport',
+    properties: {
+      barWidth: {
+        title: 'width of each data column',
+        minimum: 4,
+        maximum: 64,
+        type: 'number'
+      },
+      offset: {
+        title: 'x-offset of the chart, change this value will make the initial viewport move left or right',
+        type: 'number'
+      }
+    }
+  },
+  valuePrecision: {
+    title: 'price precision for chart label',
+    type: 'number'
+  },
+  // valueFormatter: {
+  //   description: 'if valuePrecision is not good enough for need, you can use valueFormatter provide a function to gennerate the priceText from value',
+  //   type: 'function',
+  // },
+  dateFormat: {
+    title: 'dateFormatter to format date, can be datePattern(like "YYYY-MM-DD HH:mm:ss") or a function',
+    type: 'string'
+  },
+  font: {
+    title: 'chart font config',
+    type: 'object',
+    properties: {
+      family: {
+        title: 'font family',
+        type: 'string'
+      },
+      size: {
+        title: 'font size',
+        type: 'number'
+      }
+    }
+  },
+  padding: {
+    title: 'chart padding to canvas container',
+    type: 'object',
+    properties: {
+      left: {
+        title: 'left padding of the canvas container',
+        type: 'number'
+      },
+      right: {
+        title: 'right padding of the canvas container',
+        type: 'number'
+      },
+      top: {
+        title: 'top padding of the canvas container',
+        type: 'number'
+      },
+      bottom: {
+        title: 'bottom padding of the canvas container',
+        type: 'number'
+      }
+    }
+  },
+  zoomSpeed: {
+    title: 'speed for zoom chart when triggled by mouseWheel Event',
+    type: 'number'
+  },
+  valueRangeBoundary: {
+    title: 'line indicator for highest & lowest value in viewport',
+    type: 'object',
+    properties: {
+      show: {
+        title: 'whether show the lines ',
+        type: 'boolean'
+      },
+      dash: {
+        title: 'line dash',
+        description: 'refer to mdn: CanvasRenderingContext2D.setLineDash',
+        type: 'array'
+      },
+      lineWidth: {
+        title: 'boundary line width',
+        type: 'number'
+      },
+      highColor: {
+        title: 'line color indicate the highest value in viewport',
+        description: 'refer to mdn: CanvasRenderingContext2D.lineWidth',
+        type: 'string'
+      },
+      lowColor: {
+        title: 'line color indicate the lowest value in viewport',
+        description: 'refer to mdn: CanvasRenderingContext2D.lineWidth',
+        type: 'string'
+      }
+    }
+  },
+  crosshair: {
+    title: 'crosshair indicator for mouseMove | touch(in mobile) event',
+    type: 'object',
+    properties: {
+      snapToClose: {
+        title: 'whether crosshair snap to the value or align with mouse position',
+        type: 'boolean'
+      },
+      color: {
+        title: 'crosshair line color',
+        type: 'string'
+      },
+      dash: (_dash = {
+        title: 'line dash'
+      }, _defineProperty(_dash, "title", 'refer to mdn: CanvasRenderingContext2D.setLineDash'), _defineProperty(_dash, "type", 'array'), _dash),
+      lineWidth: {
+        title: 'crosshair line width',
+        type: 'number'
+      },
+      axisLabel: {
+        title: 'axis label for the snap point',
+        type: 'object',
+        properties: (_properties = {
+          xAxisLabelPos: {
+            title: 'corsshair axis label position for x-axis, can be: bottom | top',
+            type: 'string'
+          }
+        }, _defineProperty(_properties, "xAxisLabelPos", {
+          title: 'corsshair axis label position for y-axis, can be: top | bottom',
+          type: 'string'
+        }), _defineProperty(_properties, "fontSize", {
+          title: 'corsshair axis label fontsize',
+          type: 'number'
+        }), _defineProperty(_properties, "height", {
+          title: 'corsshair axis label height',
+          type: 'number'
+        }), _defineProperty(_properties, "bg", {
+          title: 'corsshair axis label background color',
+          type: 'string'
+        }), _defineProperty(_properties, "color", {
+          title: 'corsshair axis label font-color',
+          type: 'string'
+        }), _defineProperty(_properties, "horizPadding", {
+          title: 'left & right padding of the corsshair axis label',
+          type: 'number'
+        }), _defineProperty(_properties, "posOffset", {
+          title: 'position offset for the corsshair axis label,which can used for adjust the position',
+          type: 'object',
+          properties: {
+            yAxisLabel: {
+              title: 'vertical position offset for the corsshair y-axis label, which can used for adjust the position',
+              type: 'object',
+              properties: {
+                x: {
+                  title: 'horizone offset',
+                  type: 'number'
+                },
+                y: {
+                  title: 'vertical offset',
+                  type: 'number'
+                }
+              }
+            },
+            xAxisLabel: {
+              title: 'position offset for the corsshair x-axis label, which can used for adjust the position',
+              type: 'object',
+              properties: {
+                x: {
+                  title: 'horizone offset',
+                  type: 'number'
+                },
+                y: {
+                  title: 'vertical offset',
+                  type: 'number'
+                }
+              }
+            }
+          }
+        }), _properties)
+      },
+      selectedPoint: {
+        title: 'style for selected point, define as several nested circles',
+        type: 'object',
+        properties: {
+          radius: {
+            title: 'array to describe radius of each layer',
+            type: 'array'
+          },
+          color: {
+            title: 'array to describe color of each layer',
+            type: 'array'
+          }
+        }
+      }
+    }
+  },
+  grid: {
+    title: 'style for the grid',
+    type: 'object',
+    properties: {
+      bg: {
+        title: 'background color for the grid',
+        type: 'string'
+      },
+      lineColor: {
+        title: 'line color for the grid',
+        type: 'object',
+        properties: {
+          x: {
+            title: 'color for lines parallel to the x-axis',
+            type: 'string'
+          },
+          y: {
+            title: 'color for lines parallel to the y-axis',
+            type: 'string'
+          }
+        }
+      },
+      span: {
+        title: 'span between lines of grid',
+        type: 'object',
+        properties: {
+          x: {
+            title: 'span between lines parallel to the x-axis',
+            type: 'number'
+          },
+          y: {
+            title: 'span between lines parallel to the y-axis',
+            type: 'number'
+          }
+        }
+      },
+      limit: {
+        title: 'count limit of grid lines',
+        type: 'object',
+        properties: {
+          y: {
+            title: 'count limit of  grid lines parallel to the y-axis',
+            type: 'object',
+            properties: {
+              max: {
+                title: 'max limit of  grid lines parallel to the y-axis',
+                type: 'number'
+              },
+              min: {
+                title: 'min limit of  grid lines parallel to the y-axis',
+                type: 'number'
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  axis: {
+    title: 'axis style for chart',
+    type: 'object',
+    properties: {
+      showBorder: {
+        title: 'whether show axis border',
+        type: 'boolean'
+      },
+      borderColor: {
+        title: 'color of axis border',
+        type: 'string'
+      },
+      bgColor: {
+        title: 'axis background color',
+        type: 'string'
+      },
+      label: {
+        title: 'axis background color',
+        type: 'object',
+        properties: {
+          left: {
+            title: 'label on the left side of the chart',
+            type: 'object',
+            properties: labelProperty
+          },
+          top: {
+            title: 'label on the top side of the chart',
+            type: 'object',
+            properties: labelProperty
+          },
+          right: {
+            title: 'label on the right side of the chart',
+            type: 'object',
+            properties: labelProperty
+          },
+          bottom: {
+            title: 'label on the bottom side of the chart',
+            type: 'object',
+            properties: labelProperty
+          }
+        }
+      }
+    }
+  },
+  seriesStyle: {
+    title: 'default style config for series',
+    type: 'object',
+    properties: {
+      baseValue: {
+        title: 'base value line color, base-value line will show when a series  been set baseValue',
+        type: 'string'
+      },
+      candlestick: {
+        title: 'color style for candlestick chart',
+        type: 'object',
+        properties: {
+          block: {
+            title: 'candlestock block color',
+            properties: updownColorProperty
+          },
+          border: {
+            title: 'candlestock border color',
+            properties: updownColorProperty
+          },
+          wick: {
+            title: 'candlestock wick color',
+            properties: updownColorProperty
+          }
+        }
+      },
+      OHLC: {
+        title: 'color style for OHLC chart',
+        type: 'object',
+        properties: updownColorProperty
+      },
+      mountain: {
+        title: 'color style for mountain-like chart',
+        type: 'object',
+        properties: {
+          lineWidth: {
+            title: 'mountain-like chart lineWidth',
+            type: 'number'
+          },
+          lineColor: {
+            title: 'mountain-like chart lineColor',
+            type: 'string'
+          },
+          gradientUp: {
+            title: 'first stop color for linear mountain body',
+            type: 'string'
+          },
+          gradientDown: {
+            title: 'last stop color for linear mountain body',
+            type: 'string'
+          }
+        }
+      },
+      column: {
+        title: 'color style for column chart',
+        type: 'object',
+        properties: {
+          block: {
+            title: 'column block color',
+            properties: updownColorProperty
+          },
+          border: {
+            title: 'column border color',
+            properties: updownColorProperty
+          }
+        }
+      }
+    }
+  },
+  seriesInfo: {
+    title: 'chart series config relate to data, specify which data will use to render the chart',
+    type: 'object',
+    properties: {
+      timeIndex: {
+        title: 'specify the index of time in the data, multi series will share the timeIndex',
+        type: 'number'
+      },
+      series: {
+        title: 'series config',
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            name: {
+              type: 'string'
+            },
+            seriesType: {
+              title: 'chart type, can be "line | mountain | candlestick | OHLC"',
+              type: 'string'
+            },
+            snapToProp: {
+              title: 'when crosshair move, specify a property which crosshair will snapto, if this prop is not defined, will try data[valIndex], if valIndex is not defined, will use data[c]',
+              type: 'string'
+            },
+            o: {
+              type: 'number'
+            },
+            c: {
+              type: 'number'
+            },
+            h: {
+              type: 'number'
+            },
+            l: {
+              type: 'number'
+            },
+            valIndex: {
+              type: 'number'
+            },
+            style: {
+              type: 'object'
+            }
+          }
+        }
+      }
+    }
+  }
+}), _title$title$type$req);
 
 var genContext = Symbol();
 var genCanvasLayer = Symbol();
@@ -7327,6 +7744,11 @@ function () {
     key: "updateOption",
     value: function updateOption(newOpt) {
       this.style = merge_1(this.style, newOpt);
+
+      if (newOpt.seriesInfo) {
+        this.seriesInfo = merge_1(this.seriesInfo, newOpt.seriesInfo);
+      }
+
       this.confirmType();
       this.genStyle();
       this.dataProvider && this.dataProvider.produce();
@@ -7366,8 +7788,6 @@ function () {
   }, {
     key: "genStyle",
     value: function genStyle() {
-      var _this = this;
-
       this.ctx.font = this.style.font.size + 'px ' + this.style.font.family;
       this.iaCtx.font = this.ctx.font;
       this.viewport = Object.assign({}, this.style.viewport, {
@@ -7376,26 +7796,23 @@ function () {
         right: this.originWidth - this.style.padding.right,
         bottom: this.originHeight - this.style.padding.bottom
       });
-      this.seriesInfo.series.map(function (s) {
-        s.style = s.style || _this.style.seriesStyle;
-      });
     }
   }, {
     key: painter,
     value: function value(linked, force) {
-      var _this2 = this;
+      var _this = this;
 
       this.dataProvider && this.dataProvider.produce();
       this.clean();
       Utils.Draw.Fill(this.ctx, function (ctx) {
-        ctx.rect(0, 0, _this2.originWidth, _this2.originHeight);
+        ctx.rect(0, 0, _this.originWidth, _this.originHeight);
       }, this.style.grid.bg);
       this.render.rend(); // rerender all linked charts
 
       if (this.linkedCharts.size && !linked) {
         _toConsumableArray(this.linkedCharts).forEach(function (chart) {
-          chart.viewport.offset = _this2.viewport.offset;
-          chart.viewport.barWidth = _this2.viewport.barWidth;
+          chart.viewport.offset = _this.viewport.offset;
+          chart.viewport.barWidth = _this.viewport.barWidth;
           chart.rerender(true);
         });
       }

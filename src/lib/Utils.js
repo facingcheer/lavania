@@ -397,8 +397,8 @@ const Utils = {
 
       data.forEach(d => {
         series.forEach(s => {
-          var h = d[s.type === 'candlestick' || s.type === 'OHLC' ? s.h : s.valIndex]
-          var l = d[s.type === 'candlestick' || s.type === 'OHLC' ? s.l : s.valIndex]
+          var h = d[s.style === 'candlestick' || s.style === 'OHLC' ? s.h : s.valIndex]
+          var l = d[s.style === 'candlestick' || s.style === 'OHLC' ? s.l : s.valIndex]
 
           if (h > yMax) yMax = h
           if (l < yMin) yMin = l

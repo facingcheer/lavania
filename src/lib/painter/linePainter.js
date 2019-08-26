@@ -17,7 +17,7 @@ export default function(ctx, data, coord, seriesConf, decorators) {
           ctx.moveTo(point.x, point.y)
         ctx.lineTo(point.x, point.y)
       })
-  }, seriesConf.color)
+  }, seriesConf.style.lineColor)
   if (decorators && decorators.length) {
     decorators.forEach(d => {
       if (typeof d === 'function') {

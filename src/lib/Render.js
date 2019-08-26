@@ -31,7 +31,7 @@ export default class Render {
           ctx.moveTo(viewport.left, ypos)
           ctx.lineTo(viewport.right, ypos)
         })
-      }, style.grid.color.x)
+      }, style.grid.lineColor.x)
     }
 
     const vLines = coord.verticalLines
@@ -42,7 +42,7 @@ export default class Render {
           ctx.moveTo(val.display, viewport.top)
           ctx.lineTo(val.display, viewport.bottom)
         })
-      }, style.grid.color.y)
+      }, style.grid.lineColor.y)
     }
 
     if(style.axis.showBorder) {
@@ -63,20 +63,23 @@ export default class Render {
   }
 
   drawSeries() {
-    const { type, ctx, dataProvider, viewport, dataSource, seriesInfo } = this._chart
+    const { type, ctx, dataProvider, viewport, dataSource, seriesInfo, style } = this._chart
     const { series, valueIndex } = seriesInfo
     const { coord, filteredData, panes} = dataProvider
 
    series.map(s => {
-     if (s.type === 'line' || s.type === 'mountain' || s.type === 'candlestick' || s.type === 'OHLC') {
-      chartPainter[s.type](ctx, filteredData.data, coord, s, viewport)
+    let seriesConf
+     if (s.seriesType && chartPainter[s.seriesType] && s.seriesType !== 'column') {
+      seriesConf = Object.assign({}, s, {style: style.seriesStyle[s.seriesType]})
+      chartPainter[s.seriesType](ctx, filteredData.data, coord, seriesConf, viewport)
      }
-     if(s.type === 'column') {
+     if(s.seriesType === 'column') {
+        seriesConf = Object.assign({}, s, {style: style.seriesStyle[s.seriesType]})
        if(type === 'unscalable') {
-        chartPainter.panesColumn(ctx, panes, coord, s,  viewport)
+        chartPainter.panesColumn(ctx, panes, coord, seriesConf,  viewport)
        }
        if(type === 'scalable') {
-        chartPainter.column(ctx, filteredData.data, coord, s, viewport)
+        chartPainter.column(ctx, filteredData.data, coord, seriesConf, viewport)
         }
      }
    })
@@ -110,7 +113,7 @@ export default class Render {
             ctx.textAlign = style.axis.label[direction].textAlign
             ctx.textBaseline = style.axis.label[direction].textBaseline
             ctx.fillText(val,
-              viewport[direction] + ('right' === style.axis.label[direction].textAlign ? -1 : 1) * (style.axis.showScale ? style.axis.scaleLength : 0) + xOffset,
+              viewport[direction] + xOffset,
               yPos + style.axis.label[direction].offset.y)
           })
         }, style.axis.label[direction].color)
@@ -128,7 +131,7 @@ export default class Render {
             coord.verticalLines.forEach(x => {
               ctx.fillText(dateFormatter(x.actual, style.dateFormat),
                 x.display + style.axis.label[direction].offset.x,
-                viewport[direction] + ('bottom' === style.axis.label[direction].textBaseline ? -1 : 1) * (style.axis.showScale ? style.axis.scaleLength : 0) + style.axis.label[direction].offset.y)
+                viewport[direction] + style.axis.label[direction].offset.y)
             })
           }, style.axis.label[direction].color)
         } else {
@@ -154,14 +157,14 @@ export default class Render {
               ctx.textBaseline = style.axis.label[direction].textBaseline
               ctx.fillText(dateFormatter(range[0], style.dateFormat),
                 displayRange[0] + 5,
-                viewport[direction] + ('bottom' === style.axis.label[direction].textBaseline ? -1 : 1) * (style.axis.showScale ? style.axis.scaleLength : 0) + style.axis.label[direction].offset.y)
+                viewport[direction] + style.axis.label[direction].offset.y)
 
               let lastDateStr = dateFormatter(range[1], style.dateFormat)
 
               var strWidth = ctx.measureText(lastDateStr).width
               ctx.fillText(lastDateStr,
                 displayRange[1] - strWidth - 5,
-                viewport[direction] + ('bottom' === style.axis.label[direction].textBaseline ? -1 : 1) * (style.axis.showScale ? style.axis.scaleLength : 0) + style.axis.label[direction].offset.y)
+                viewport[direction] + style.axis.label[direction].offset.y)
             }, style.axis.label[direction].color)
           })
         }
@@ -259,7 +262,7 @@ export default class Render {
     if (style.valueRangeBoundary.show && mainSeries && filteredData && filteredData.data && filteredData.data.length) {
       let max = filteredData.data[0]
       let min = filteredData.data[0]
-      if (mainSeries.type === 'candlestick' || mainSeries.type === 'OHLC'){
+      if (mainSeries.seriesType === 'candlestick' || mainSeries.seriesType === 'OHLC'){
 
         var highIndex = mainSeries.h
         var lowIndex = mainSeries.l
@@ -284,6 +287,9 @@ export default class Render {
         if(style.valueRangeBoundary.dash){
           ctx.setLineDash(style.valueRangeBoundary.dash)
         }
+        if(style.valueRangeBoundary.lineWidth){
+          ctx.lineWidth = style.valueRangeBoundary.lineWidth
+        }
         ctx.moveTo(style.padding.left, maxY)
         ctx.lineTo(viewport.right, maxY)
       }, style.valueRangeBoundary.highColor)
@@ -291,6 +297,9 @@ export default class Render {
       Draw.Stroke(ctx, ctx => {
         if(style.valueRangeBoundary.dash){
           ctx.setLineDash(style.valueRangeBoundary.dash)
+        }
+        if(style.valueRangeBoundary.lineWidth){
+          ctx.lineWidth = style.valueRangeBoundary.lineWidth
         }
         ctx.moveTo(style.padding.left, minY)
         ctx.lineTo(viewport.right, minY)
@@ -304,7 +313,7 @@ export default class Render {
             ctx.textAlign = style.axis.label[direction].textAlign
             ctx.textBaseline = style.axis.label[direction].textBaseline
             ctx.fillText(maxVal,
-              viewport[direction] + ('right' === style.axis.label[direction].textAlign ? -1 : 1) * (style.axis.showScale ? style.axis.scaleLength : 0) + style.axis.label[direction].offset.x,
+              viewport[direction] + style.axis.label[direction].offset.x,
                maxY)
           }, style.valueRangeBoundary.highColor)
 
@@ -314,7 +323,7 @@ export default class Render {
             ctx.textAlign = style.axis.label[direction].textAlign
             ctx.textBaseline = style.axis.label[direction].textBaseline
             ctx.fillText(minVal,
-              viewport[direction] + ('right' === style.axis.label[direction].textAlign ? -1 : 1) * (style.axis.showScale ? style.axis.scaleLength : 0) + style.axis.label[direction].offset.x,
+              viewport[direction] + style.axis.label[direction].offset.x,
               minY)
           }, style.valueRangeBoundary.lowColor)
         }

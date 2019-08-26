@@ -117,10 +117,10 @@
               series: [
                 // {name: '分时图', type: 'line', valIndex: 2},
                 // {name: 'K2线', type: 'candlestick', o: 1, c: 2, h: 3, l: 4},
-                {name: 'K线', type: 'candlestick', o: 1, c: 2, h: 3, l: 4, main:true},
+                {name: 'K线', seriesType: 'candlestick', o: 1, c: 2, h: 3, l: 4, valIndex: 9, snapToProp: 'c', main:true},
 
                 // {name: 'K线', type: 'candlestick', as: 'mountain', t: 0, o: 1, c: 2, h: 3, l: 4}, // 这句可以显示山型线
-                {name: '均线', type: 'mountain', valIndex: 9, color: 'teal', lineWidth: 1}
+                {name: '均线', seriesType: 'mountain', valIndex: 9}
               ]
             },
             viewport: {
@@ -134,9 +134,7 @@
           chart.updateOption({
             zoomSpeed: 2,
             crosshair: {
-              dash: [5,5],
-              labelBg: '#efefef',
-              labelColor: '#666'
+              dash: [5,5]
             }
           })
 
@@ -176,11 +174,9 @@
             },
             colorPicker: true,
             onChange() {
-              console.log(1)
               chart.updateOption(editor.get())
             },
             onChangeText() {
-              console.log(111)
               // applyHint()
             }
           };
@@ -223,7 +219,7 @@
                 // example for baseIndex : data Like [1480464000000, 1.0647, 1.0648, 1.066, 1.0646, 0.001, 0.001, 0.001, 1.0648, 1.0640399999999999], 1.0647 stand for opening-price & 1.0648 stand for close-price
                 // we can set valIndex as 2 and  the baseIndex as 1, so each data will compare it's close with it's opening
                 // if all the set not good enough you can use detect function to define it your self
-                {name: '均线', type: 'column', valIndex: 10, color:
+                {name: '均线', seriesType: 'column', valIndex: 10, color:
                 {
                   up: '#FF4040',
                   down: '#1EB955',
@@ -279,7 +275,7 @@
               // touchTop: true,
               timeIndex: 0,
               series: [
-                {name: '分时图', type: 'line', valIndex: 2, main:true},
+                {name: '分时图', seriesType: 'line', valIndex: 2, main:true},
                 // {name: '均线', type: 'line', t: 0, valIndex: 9, color: 'orange', lineWidth: 1},
 
                 // column can use baseVal or baseIndex to detect a value(it's a array) should be up or down
@@ -288,7 +284,7 @@
                 // example for baseIndex : data Like [1480464000000, 1.0647, 1.0648, 1.066, 1.0646, 0.001, 0.001, 0.001, 1.0648, 1.0640399999999999], 1.0647 stand for opening-price & 1.0648 stand for close-price
                 // we can set valIndex as 2 and  the baseIndex as 1, so each data will compare it's close with it's opening
                 // if all the set not good enough you can use detect function to define it your self
-                {name: '均线', type: 'column', valIndex: 2, color:
+                {name: '均线', seriesType: 'column', valIndex: 2, color:
                 {
                   up: '#FF4040',
                   down: '#1EB955',
@@ -322,7 +318,7 @@
                 // example for baseIndex : data Like [1480464000000, 1.0647, 1.0648, 1.066, 1.0646, 0.001, 0.001, 0.001, 1.0648, 1.0640399999999999], 1.0647 stand for opening-price & 1.0648 stand for close-price
                 // we can set valIndex as 2 and  the baseIndex as 1, so each data will compare it's close with it's opening
                 // if all the set not good enough you can use detect function to define it your self
-                {name: '均线', type: 'column', valIndex: 2, color:
+                {name: '均线', seriesType: 'column', valIndex: 2, color:
                 {
                   up: '#FF4040',
                   down: '#1EB955',

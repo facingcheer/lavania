@@ -12,6 +12,7 @@ const DEFAULTS = function(){
     valueRangeBoundary: {
       show: true, //显示当前范围的价格边界
       dash: [10, 10],
+      lineWidth: 1,
       highColor: '#FF4040',    // 最高价颜色
       lowColor: '#1EB955',    // 最低价颜色
     },
@@ -40,8 +41,8 @@ const DEFAULTS = function(){
         color: '#666',    // 十字线标签字体色
         horizPadding: 5,    // 十字线标签水平空白间距
         posOffset: {    // 十字线标签偏移
-          vertical: {x: 0, y: 0}, // 0 means auto
-          horizontal: {x: 0, y: 0}
+          yAxisLabel: {x: 0, y: 0}, // 0 means auto
+          xAxisLabel: {x: 0, y: 0}
         },
       },
       selectedPoint: {
@@ -57,19 +58,20 @@ const DEFAULTS = function(){
           min: 2
         }
       },    // 网格线间隔调整限制
-      color: {x: '#f0f0f0', y: '#f0f0f0'},    // 网格线的颜色
+      lineColor: {x: '#f0f0f0', y: '#f0f0f0'},    // 网格线的颜色
       span: {x: 120, y: 30} //
     },
     axis: {
       showBorder: false, // 显示图表border
       borderColor: '#000',
-      showRate: false,    // 显示百分比
+      bgColor: 'rgba(0,0,0,0)',    // 坐标轴背景色
+      // showRate: false,    // 显示百分比
       label: {
         top: {
           show: false,
           color: '#555',
           fontSize: 12,
-          offset: {x: 0, y: 0},
+          offset: {x: 0, y: 10},
           textAlign: 'center', // label text align,  Possible values: refrence to CanvasRenderingContext2D.textAlign
           textBaseline: 'top', // label text baseline,  Possible values: refrence to CanvasRenderingContext2D.textBaseline
         },
@@ -77,7 +79,7 @@ const DEFAULTS = function(){
           show: true,
           color: '#555',
           fontSize: 12,
-          offset: {x: 0, y: 0},
+          offset: {x: 10, y: 0},
           textAlign: 'left',
           textBaseline: 'middle',
         },
@@ -85,7 +87,7 @@ const DEFAULTS = function(){
           show: true,
           color: '#555',
           fontSize: 12,
-          offset: {x: 0, y: 0},
+          offset: {x: 0, y: 10},
           textAlign: 'center',
           textBaseline: 'top',
         },
@@ -93,15 +95,11 @@ const DEFAULTS = function(){
           show: false,
           color: '#555',
           fontSize: 12,
-          offset: {x: 0, y: 0},
+          offset: {x: 10, y: 0},
           textAlign: 'left',
           textBaseline: 'middle',
         }
-      },
-      bgColor: 'rgba(0,0,0,0)',    // 坐标轴背景色
-      // lineColor: 'rgba(0,0,0,1)',    // 坐标轴线颜色
-      showScale: true,   //是否显示刻度
-      scaleLength: 10,    // 刻度长度
+      }
     },
     seriesStyle: {    // 关于数据的样式
       baseValue: '#2DB0F9',    // 分时图昨收的颜色
@@ -118,6 +116,10 @@ const DEFAULTS = function(){
         lineColor: '#2DB0F9',    // 价格线的颜色
         gradientUp: 'rgba(45,176,249,0.15)',    // 山形内部渐变色
         gradientDown: 'rgba(19,119,240,0.02)'
+      },
+      line: {    // 线
+        lineWidth: 1,    // 价格线的粗细
+        lineColor: '#2DB0F9',    // 价格线的颜色
       },
       column: {
         block: {up: '#FF4040', down: '#1EB955'},    // 蜡烛块的颜色

@@ -7,8 +7,8 @@ export default function(ctx, data, coord, seriesConf) {
   decorators.push(function gradientDecorator(points, seriesConf) {
     // draw gradient
       var gradient = ctx.createLinearGradient(0, 0, 0, coord.y.display[0] - coord.y.display[1])
-      gradient.addColorStop(0, seriesConf.style.mountain.gradientUp)
-      gradient.addColorStop(1, seriesConf.style.mountain.gradientDown)
+      gradient.addColorStop(0, seriesConf.style.gradientUp)
+      gradient.addColorStop(1, seriesConf.style.gradientDown)
 
       Draw.Fill(ctx, ctx => {
         ctx.moveTo(points[0].x, coord.y.display[0])

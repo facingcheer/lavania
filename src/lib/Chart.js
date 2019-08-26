@@ -56,6 +56,11 @@ class Chart {
 
   updateOption(newOpt) {
     this.style = merge(this.style, newOpt)
+
+    if(newOpt.seriesInfo) {
+      this.seriesInfo = merge(this.seriesInfo, newOpt.seriesInfo)
+    }
+
     this.confirmType()
     this.genStyle()
     this.dataProvider && this.dataProvider.produce()
@@ -105,10 +110,6 @@ class Chart {
       top: this.style.padding.top,
       right: this.originWidth - this.style.padding.right,
       bottom: this.originHeight - this.style.padding.bottom
-    })
-
-    this.seriesInfo.series.map(s => {
-      s.style = s.style || this.style.seriesStyle
     })
   }
 

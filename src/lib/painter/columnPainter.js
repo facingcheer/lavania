@@ -41,6 +41,6 @@ export default function(ctx, data, coord, seriesConf, viewport) {
             ~~coordY.display[0]) + 0.02)
         }
       })
-    }, seriesConf.style.column.block[direction], seriesConf.style.column.border[direction])
+    }, seriesConf.style.block[direction], seriesConf.style.border[direction])
   }
 }
