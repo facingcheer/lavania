@@ -28,7 +28,7 @@ const DEFAULTS = function(){
       },
     },
     crosshair: {
-      snapToClose: false,    // 十字线是否被当前close价吸引
+      snapToData: false,    // 十字线是否被当前close价吸引
       color: '#979797',    // 十字线颜色
       dash: [5,5],
       lineWidth: 1,

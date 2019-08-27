@@ -139,7 +139,7 @@ var DEFAULTS = function DEFAULTS() {
       }
     },
     crosshair: {
-      snapToClose: false,
+      snapToData: false,
       // 十字线是否被当前close价吸引
       color: '#979797',
       // 十字线颜色
@@ -1678,7 +1678,7 @@ var events = {
       var fixOffset = ctx.lineWidth % 2 ? 0.5 : 0; // draw horizontal line
 
       if (!linked) {
-        chart.eventInfo.yPos = chart.style.crosshair.snapToClose && chart.eventInfo.selectedItem ? ~~Utils.Coord.linearActual2Display(chart.eventInfo.selectedItem[chart.seriesInfo.series[0].c || chart.seriesInfo.series[0].valIndex], chart.dataProvider.coord.y) : e.localY;
+        chart.eventInfo.yPos = chart.style.crosshair.snapToData && chart.eventInfo.selectedItem ? ~~Utils.Coord.linearActual2Display(chart.eventInfo.selectedItem[chart.seriesInfo.series[0].c || chart.seriesInfo.series[0].valIndex], chart.dataProvider.coord.y) : e.localY;
         ctx.moveTo(chart.viewport.left, ~~chart.eventInfo.yPos + fixOffset);
         ctx.lineTo(chart.viewport.right, ~~chart.eventInfo.yPos + fixOffset);
       }
@@ -1712,7 +1712,7 @@ var events = {
       labelBg: '#efefef'
     });
     if (linked) return;
-    var horizPos = chart.style.crosshair.snapToClose && chart.eventInfo.selectedItem ? ~~Utils.Coord.linearActual2Display(chart.eventInfo.selectedItem[chart.seriesInfo.series[0].c || chart.seriesInfo.series[0].valIndex], chart.dataProvider.coord.y) : e.localY;
+    var horizPos = chart.style.crosshair.snapToData && chart.eventInfo.selectedItem ? ~~Utils.Coord.linearActual2Display(chart.eventInfo.selectedItem[chart.seriesInfo.series[0].c || chart.seriesInfo.series[0].valIndex], chart.dataProvider.coord.y) : e.localY;
     var hoverValue = !linked ? Utils.Coord.linearDisplay2Actual(horizPos, chart.dataProvider.coord.y).toFixed(chart.style.valuePrecision) : 0;
     textLabelPainter({
       ctx: chart.iaCtx,

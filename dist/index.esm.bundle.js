@@ -2454,7 +2454,7 @@ var DEFAULTS = function DEFAULTS() {
       }
     },
     crosshair: {
-      snapToClose: false,
+      snapToData: false,
       // 十字线是否被当前close价吸引
       color: '#979797',
       // 十字线颜色
@@ -3999,9 +3999,7 @@ var events = {
     }
 
     if (!chart.eventInfo.selectedItem) return;
-    var mainSeries = chart.seriesInfo.series.find(function (s) {
-      return s.main;
-    }) || chart.seriesInfo.series[0];
+    var mainSeries = chart.seriesInfo.series[chart.seriesInfo.mainSeriesIndex || 0];
     Utils.Draw.Stroke(chart.iaCtx, function (ctx) {
       ctx.lineWidth = chart.style.crosshair.lineWidth || 1;
       ctx.setLineDash(chart.style.crosshair.dash); // verticalPos = e.localX
@@ -4009,7 +4007,7 @@ var events = {
       var fixOffset = ctx.lineWidth % 2 ? 0.5 : 0; // draw horizontal line
 
       if (!linked) {
-        chart.eventInfo.yPos = chart.style.crosshair.snapToClose && chart.eventInfo.selectedItem ? ~~Utils.Coord.linearActual2Display(chart.eventInfo.selectedItem[mainSeries[mainSeries.snapToProp] || mainSeries.valIndex || mainSeries.c], chart.dataProvider.coord.y) : e.localY;
+        chart.eventInfo.yPos = chart.style.crosshair.snapToData && chart.eventInfo.selectedItem ? ~~Utils.Coord.linearActual2Display(chart.eventInfo.selectedItem[mainSeries[mainSeries.snapToProp] || mainSeries.valIndex || mainSeries.c], chart.dataProvider.coord.y) : e.localY;
         ctx.moveTo(chart.viewport.left, ~~chart.eventInfo.yPos + fixOffset);
         ctx.lineTo(chart.viewport.right, ~~chart.eventInfo.yPos + fixOffset);
       }
@@ -4026,6 +4024,7 @@ var events = {
 
     var hoverTime = chart.eventInfo.selectedItem[chart.seriesInfo.timeIndex];
     var hoverTimeStr = dateFormatter(hoverTime, chart.style.dateFormat);
+    var mainSeries = chart.seriesInfo.series[chart.seriesInfo.mainSeriesIndex || 0];
     textLabelPainter({
       ctx: chart.iaCtx,
       text: hoverTimeStr,
@@ -4042,7 +4041,7 @@ var events = {
       font: chart.style.font
     });
     if (linked) return;
-    var horizPos = chart.style.crosshair.snapToClose && chart.eventInfo.selectedItem ? ~~Utils.Coord.linearActual2Display(chart.eventInfo.selectedItem[mainSeries.c || mainSeries.valIndex], chart.dataProvider.coord.y) : e.localY;
+    var horizPos = chart.style.crosshair.snapToData && chart.eventInfo.selectedItem ? ~~Utils.Coord.linearActual2Display(chart.eventInfo.selectedItem[mainSeries[mainSeries.snapToProp] || mainSeries.valIndex || mainSeries.c], chart.dataProvider.coord.y) : e.localY;
     var hoverValue;
 
     if (!linked) {
@@ -4070,9 +4069,7 @@ var events = {
   selectDot: function selectDot(chart, e, linked) {
     // const chart = this
     if (!chart.eventInfo.selectedItem || linked) return;
-    var mainSeries = chart.seriesInfo.series.find(function (s) {
-      return s.main;
-    }) || chart.seriesInfo.series[0];
+    var mainSeries = chart.seriesInfo.series[chart.seriesInfo.mainSeriesIndex || 0];
     var radius = chart.style.crosshair.selectedPoint.radius;
     chart.style.crosshair.selectedPoint.color.forEach(function (color, index) {
       Utils.Draw.Fill(chart.iaCtx, function (ctx) {
@@ -7386,7 +7383,7 @@ var schema = (_title$title$type$req = {
     title: 'crosshair indicator for mouseMove | touch(in mobile) event',
     type: 'object',
     properties: {
-      snapToClose: {
+      snapToData: {
         title: 'whether crosshair snap to the value or align with mouse position',
         type: 'boolean'
       },
@@ -7655,6 +7652,10 @@ var schema = (_title$title$type$req = {
     properties: {
       timeIndex: {
         title: 'specify the index of time in the data, multi series will share the timeIndex',
+        type: 'number'
+      },
+      mainSeriesIndex: {
+        title: 'specify the index of the main series, main series is used for crosshair to snap to, default to 0',
         type: 'number'
       },
       series: {

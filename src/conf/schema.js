@@ -158,7 +158,7 @@ export default {
       title: 'crosshair indicator for mouseMove | touch(in mobile) event',
       type: 'object',
       properties: {
-        snapToClose: {
+        snapToData: {
           title: 'whether crosshair snap to the value or align with mouse position',
           type: 'boolean',
         },
@@ -436,6 +436,10 @@ export default {
       properties: {
         timeIndex: {
           title: 'specify the index of time in the data, multi series will share the timeIndex',
+          type: 'number',
+        },
+        mainSeriesIndex: {
+          title: 'specify the index of the main series, main series is used for crosshair to snap to, default to 0',
           type: 'number',
         },
         series: {

@@ -107,7 +107,7 @@ const events = {
     }
 
     if (!chart.eventInfo.selectedItem) return
-    const mainSeries = chart.seriesInfo.series.find(s => s.main) || chart.seriesInfo.series[0]
+    const mainSeries = chart.seriesInfo.series[chart.seriesInfo.mainSeriesIndex || 0]
     Utils.Draw.Stroke(chart.iaCtx, ctx => {
       ctx.lineWidth = chart.style.crosshair.lineWidth || 1
       ctx.setLineDash(chart.style.crosshair.dash)
@@ -116,7 +116,7 @@ const events = {
       var fixOffset = (ctx.lineWidth % 2 ? 0.5 : 0)
       // draw horizontal line
       if (!linked) {
-        chart.eventInfo.yPos = chart.style.crosshair.snapToClose && chart.eventInfo.selectedItem ?
+        chart.eventInfo.yPos = chart.style.crosshair.snapToData && chart.eventInfo.selectedItem ?
           ~~Utils.Coord.linearActual2Display(chart.eventInfo.selectedItem[mainSeries[mainSeries.snapToProp] || mainSeries.valIndex || mainSeries.c], chart.dataProvider.coord.y) :
           e.localY
         ctx.moveTo(chart.viewport.left, ~~chart.eventInfo.yPos + fixOffset)
@@ -139,6 +139,8 @@ const events = {
     let hoverTime = chart.eventInfo.selectedItem[chart.seriesInfo.timeIndex]
 
     let hoverTimeStr = dateFormatter(hoverTime, chart.style.dateFormat)
+    const mainSeries = chart.seriesInfo.series[chart.seriesInfo.mainSeriesIndex || 0]
+
     textLabelPainter({
       ctx: chart.iaCtx,
       text: hoverTimeStr,
@@ -157,8 +159,8 @@ const events = {
 
     if (linked) return
 
-    let horizPos = chart.style.crosshair.snapToClose && chart.eventInfo.selectedItem ?
-      ~~Utils.Coord.linearActual2Display(chart.eventInfo.selectedItem[mainSeries.c || mainSeries.valIndex], chart.dataProvider.coord.y) : e.localY
+    let horizPos = chart.style.crosshair.snapToData && chart.eventInfo.selectedItem ?
+      ~~Utils.Coord.linearActual2Display(chart.eventInfo.selectedItem[mainSeries[mainSeries.snapToProp] || mainSeries.valIndex || mainSeries.c], chart.dataProvider.coord.y) : e.localY
     let hoverValue
     if(!linked) {
       hoverValue = Utils.Math.valueFormat(Utils.Coord.linearDisplay2Actual(horizPos, chart.dataProvider.coord.y),chart.style.valueFormatter, chart.style.valuePrecision)
@@ -186,7 +188,7 @@ const events = {
   selectDot(chart, e, linked) {
     // const chart = this
     if (!chart.eventInfo.selectedItem || linked) return
-    const mainSeries = chart.seriesInfo.series.find(s => s.main) || chart.seriesInfo.series[0]
+    const mainSeries = chart.seriesInfo.series[chart.seriesInfo.mainSeriesIndex || 0]
 
     let radius = chart.style.crosshair.selectedPoint.radius
     chart.style.crosshair.selectedPoint.color.forEach((color, index) => {
