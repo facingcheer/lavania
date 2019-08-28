@@ -5,7 +5,6 @@ import rafThrottle from './utils/rafThrottle'
 
 export function genEvent(chart, type) {
   let e = {}
-  // eslint-disable-next-line camelcase
   chart.eventInfo = {
     selectedItem: null,
     selectedIndex: null,
@@ -19,7 +18,6 @@ export function genEvent(chart, type) {
       center: null
     }
   }
-
 
   Object.entries(eventSource[type]).forEach(([name, func]) => {
       e[name] = rafThrottle(event => {
@@ -41,7 +39,7 @@ export function genEvent(chart, type) {
 const eventSource = {
   scalable: {
     mouseMoveEvent:(...args) => {
-      _processEventUnits(['clean', 'crosshair', 'axisLabel', 'selectDot'], args)
+      _processEventUnits(['clean', 'crosshair', 'axisLabel', 'selectDot', 'toolTip'], args)
     },
     mouseLeaveEvent: (...args) => {
       _processEventUnits(['clean'], args)
@@ -115,9 +113,18 @@ const events = {
 
       var fixOffset = (ctx.lineWidth % 2 ? 0.5 : 0)
       // draw horizontal line
+
+      let snapPointIndex
+      if (chart.style.crosshair.snapProperty && mainSeries[chart.style.crosshair.snapProperty]){
+        snapPointIndex = mainSeries[chart.style.crosshair.snapProperty]
+      } else {
+        snapPointIndex = mainSeries['valIndex' || 'closeIndex']
+      }
+      // if(!snapPointIndex) return
+
       if (!linked) {
-        chart.eventInfo.yPos = chart.style.crosshair.snapToData && chart.eventInfo.selectedItem ?
-          ~~Utils.Coord.linearActual2Display(chart.eventInfo.selectedItem[mainSeries[mainSeries.snapToProp] || mainSeries.valIndex || mainSeries.c], chart.dataProvider.coord.y) :
+        chart.eventInfo.yPos = chart.style.crosshair.snapToData && snapPointIndex && chart.eventInfo.selectedItem ?
+          ~~Utils.Coord.linearActual2Display(chart.eventInfo.selectedItem[snapPointIndex], chart.dataProvider.coord.y) :
           e.localY
         ctx.moveTo(chart.viewport.left, ~~chart.eventInfo.yPos + fixOffset)
         ctx.lineTo(chart.viewport.right, ~~chart.eventInfo.yPos + fixOffset)
@@ -159,8 +166,16 @@ const events = {
 
     if (linked) return
 
+    let snapPointIndex
+    if (chart.style.crosshair.snapProperty && mainSeries[chart.style.crosshair.snapProperty]){
+      snapPointIndex = mainSeries[chart.style.crosshair.snapProperty]
+    } else {
+      snapPointIndex = mainSeries['valIndex' || 'closeIndex']
+    }
+    if(!snapPointIndex) return
+
     let horizPos = chart.style.crosshair.snapToData && chart.eventInfo.selectedItem ?
-      ~~Utils.Coord.linearActual2Display(chart.eventInfo.selectedItem[mainSeries[mainSeries.snapToProp] || mainSeries.valIndex || mainSeries.c], chart.dataProvider.coord.y) : e.localY
+      ~~Utils.Coord.linearActual2Display(chart.eventInfo.selectedItem[snapPointIndex], chart.dataProvider.coord.y) : e.localY
     let hoverValue
     if(!linked) {
       hoverValue = Utils.Math.valueFormat(Utils.Coord.linearDisplay2Actual(horizPos, chart.dataProvider.coord.y),chart.style.valueFormatter, chart.style.valuePrecision)
@@ -187,17 +202,56 @@ const events = {
 
   selectDot(chart, e, linked) {
     // const chart = this
-    if (!chart.eventInfo.selectedItem || linked) return
+    if (!chart.eventInfo.selectedItem || !chart.style.crosshair.snapToData) return
     const mainSeries = chart.seriesInfo.series[chart.seriesInfo.mainSeriesIndex || 0]
+
+    let snapPointIndex
+    if (chart.style.crosshair.snapProperty && mainSeries[chart.style.crosshair.snapProperty]){
+      snapPointIndex = mainSeries[chart.style.crosshair.snapProperty]
+    } else {
+      snapPointIndex = mainSeries['valIndex' || 'closeIndex']
+    }
+    if(!snapPointIndex) return
 
     let radius = chart.style.crosshair.selectedPoint.radius
     chart.style.crosshair.selectedPoint.color.forEach((color, index) => {
       Utils.Draw.Fill(chart.iaCtx, ctx => {
         ctx.arc(chart.eventInfo.selectedItem.x + 0.5,
-          Utils.Coord.linearActual2Display(chart.eventInfo.selectedItem[mainSeries[mainSeries.snapToProp] || mainSeries.valIndex || mainSeries.c], chart.dataProvider.coord.y) - 1.5,
+          Utils.Coord.linearActual2Display(chart.eventInfo.selectedItem[snapPointIndex], chart.dataProvider.coord.y) - 1.5,
           radius[index], 0, 2 * Math.PI)
       }, color)
     })
+  },
+  toolTip(chart, e, linked) {
+    if (!chart.eventInfo.selectedItem) return
+    chart.toolTipLayer.innerHTML = ''
+    let d = document.createElement('div')
+    if(!chart.style.crosshair.toolTip || Object.prototype.toString.call(chart.style.crosshair.toolTip) !== '[object Function]') return
+     chart.style.crosshair.toolTip(chart.eventInfo, dom=> {
+      d.innerHTML = dom
+      d.style.position = 'absolute'
+      d.style.left = 0
+      d.style.visibility = 'hidden'
+      d.style.top = 0
+      chart.toolTipLayer.appendChild(d)
+
+      let { left, top } = calcBoxPositionInBounding({
+        x: chart.eventInfo.xPos,
+        y: chart.eventInfo.yPos
+      }, {
+        width: d.clientWidth,
+        height: d.clientHeight
+      }, {
+        width: chart.toolTipLayer.clientWidth,
+        height: chart.toolTipLayer.clientHeight
+      })
+
+      d.style.left = left + 'px'
+      d.style.top = top + 'px'
+      d.style.visibility = 'visible'
+    })
+
+    // console.log(d, d.offsetHeight, d.offsetWidth)
   },
 
   panStart(chart, e, linked) {
@@ -229,7 +283,7 @@ const events = {
     chart.eventInfo.pinchStart.offset = chart.viewport.offset
     chart.eventInfo.pinchStart.barWidth = chart.viewport.barWidth
     chart.eventInfo.pinchStart.center = e.center
-    let [selectedItem, selectedIndex] = getNearest[chart.seriesInfo.timeRanges ? 'unscalable' : 'scalable'](chart, e.center.x) || [null, null]
+    let [selectedItem, selectedIndex] = getNearest[chart.type](chart, e.center.x) || [null, null]
     chart.eventInfo.selectedItem = selectedItem
     chart.eventInfo.selectedIndex = selectedIndex
   },
@@ -237,7 +291,6 @@ const events = {
   pinchMove(chart, e, linked) {
     if (linked) return
     if (!chart.eventInfo.selectedItem|| !chart.eventInfo.selectedIndex) {
-      console.log('no select')
       return
     }
     console.log(linked, chart.eventInfo.selectedIndex, e.scale)
@@ -269,6 +322,9 @@ const events = {
   },
 
   clean(chart, e, linked) {
+    if(chart.toolTipLayer){
+      chart.toolTipLayer.innerHTML = ''
+    }
     chart.iaCtx.clearRect(0, 0, chart.originWidth, chart.originHeight)
   },
 
@@ -280,9 +336,8 @@ const events = {
     if (linked) return
     let zoomScale = Math.sign(e.deltaY) * Math.min(1, Math.abs(e.deltaY))
 
-    let [selectedItem, selectedIndex] = getNearest[chart.seriesInfo.timeRanges ? 'unscalable' : 'scalable'](chart, e.localX) || [null, null]
+    let [selectedItem, selectedIndex] = getNearest[chart.type](chart, e.localX) || [null, null]
     if (!selectedIndex || !selectedItem) {
-      console.log('no select')
       return
     }
 
@@ -348,4 +403,39 @@ const getNearest = {
 
 function _processEventUnits(units, args) {
   units.forEach(name => events[name] && events[name](...args))
+}
+
+
+function calcBoxPositionInBounding(origin, box, bounding, minMargin = 20) {
+  let horizPos, verticalPos
+  if(origin.x + box.width + minMargin < bounding.width) {
+    //can set in right
+    horizPos = origin.x + minMargin
+  } else {
+    // set in left
+    if(origin.x - box.width - minMargin < 0) {
+      // alert('tooltip is too wide to set in chart')
+      horizPos = bounding.width - box.width - minMargin
+    } else {
+      horizPos = origin.x - box.width - minMargin
+    }
+  }
+
+  if(origin.y + box.height + minMargin < bounding.height) {
+    //can set in bottom
+    verticalPos = origin.y + minMargin
+  } else {
+    if(origin.y - box.height - minMargin < 0) {
+      console.log('tooltip is too high to set in chart')
+      verticalPos = bounding.height - box.height - minMargin
+    } else {
+      verticalPos = origin.y - box.height - minMargin
+    }
+    // set in top
+
+  }
+  return {
+    left: horizPos,
+    top: verticalPos
+  }
 }

@@ -18,7 +18,7 @@ function drawOHLC(ctx, OHLC, columnWidth, ohlcColor) {
       OHLC[direction].forEach(ohlc => {
         ctx.moveTo(ohlc.x + 0.5,  ohlc.low)
         ctx.lineTo(ohlc.x + 0.5,  ohlc.high)
-        ctx.moveTo(~~(ohlc.x - half) + 0.5, ohlc.open )
+        ctx.moveTo(~~(ohlc.x - half) + 0.5, ohlc.open)
         ctx.lineTo(ohlc.x, ohlc.open)
         ctx.moveTo(~~(ohlc.x + half) + 0.5, ohlc.close)
         ctx.lineTo(ohlc.x, ohlc.close)

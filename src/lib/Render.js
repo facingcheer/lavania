@@ -211,19 +211,19 @@ export default class Render {
   drawAdditionalTips() {
     const { seriesInfo, dataSource, ctx, style, dataProvider, viewport } = this._chart
     const { filteredData, coord } = dataProvider
-    if (seriesInfo.timeRanges !== undefined &&
-        seriesInfo.baseValue !== undefined){
+    if (seriesInfo.baseValue !== undefined && typeof seriesInfo.baseValue === 'number'){
       var y = ~~Utils.Coord.linearActual2Display(seriesInfo.baseValue, coord.y)
       Draw.Stroke(ctx, ctx => {
-        ctx.lineWidth = 2
-        ctx.setLineDash([5,5])
-        ctx.moveTo(style.padding.left, y)
-        ctx.lineTo(viewport.right, y)
-      }, style.seriesStyle.baseValue)
+        ctx.lineWidth = style.seriesStyle.baseValueLine.lineWidth
+        ctx.setLineDash(style.seriesStyle.baseValueLine.dash)
+        ctx.moveTo(style.padding.left, y + 0.5)
+        ctx.lineTo(viewport.right, y + 0.5)
+      }, style.seriesStyle.baseValueLine.color)
     }
 
     // draw current price
-    const mainSeries = seriesInfo.series.find(s => s.main)
+    // const mainSeries = seriesInfo.series.find(s => s.main)
+    const mainSeries = seriesInfo.series[seriesInfo.mainSeriesIndex || 0]
 
     if (dataSource.length > 0){
       if (mainSeries){
@@ -231,7 +231,7 @@ export default class Render {
         const x = style.axis.yAxisPos === 'right' ? viewport.right : 0
         const width = style.axis.yAxisPos === 'right' ? style.padding.right : style.padding.left
         const last = dataSource[dataSource.length - 1]
-        const value = last[mainSeries.c || mainSeries.valIndex]
+        const value = last[mainSeries.closeIndex || mainSeries.valIndex]
         const y = ~~Utils.Coord.linearActual2Display(value, coord.y)
 
         Draw.Stroke(ctx, ctx => {
@@ -264,8 +264,8 @@ export default class Render {
       let min = filteredData.data[0]
       if (mainSeries.seriesType === 'candlestick' || mainSeries.seriesType === 'OHLC'){
 
-        var highIndex = mainSeries.h
-        var lowIndex = mainSeries.l
+        var highIndex = mainSeries.highIndex
+        var lowIndex = mainSeries.lowIndex
       } else {
         highIndex = mainSeries.valIndex
         lowIndex = mainSeries.valIndex

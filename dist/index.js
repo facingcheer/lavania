@@ -29,6 +29,21 @@ function _createClass(Constructor, protoProps, staticProps) {
   return Constructor;
 }
 
+function _defineProperty(obj, key, value) {
+  if (key in obj) {
+    Object.defineProperty(obj, key, {
+      value: value,
+      enumerable: true,
+      configurable: true,
+      writable: true
+    });
+  } else {
+    obj[key] = value;
+  }
+
+  return obj;
+}
+
 function _slicedToArray(arr, i) {
   return _arrayWithHoles(arr) || _iterableToArrayLimit(arr, i) || _nonIterableRest();
 }
@@ -97,8 +112,9 @@ var DEFAULTS = function DEFAULTS() {
     // 图表显示的视野, width表示单个数据元素占用宽度
     valuePrecision: 4,
     // 设定的数据精度,
+    valueFormatter: null,
     dateFormat: 'MM/DD HH:mm',
-    dateFontSize: 12,
+    // format pattern or function( date | UnixTime ) => string
     font: {
       family: 'Microsoft YaHei',
       size: 14
@@ -112,13 +128,16 @@ var DEFAULTS = function DEFAULTS() {
     // 设定4周数据轴区域的大小
     zoomSpeed: 5,
     // 设定鼠标滚轮滚动单步调整的大小
-    linearLastPoint: false,
-    // 绘制当前价的闪烁点
-    // showHighLowLine: true,
+    // linearLastPoint: false,    // 绘制当前价的闪烁点
     valueRangeBoundary: {
       show: true,
       //显示当前范围的价格边界
-      dash: [10, 10]
+      dash: [10, 10],
+      lineWidth: 1,
+      highColor: '#FF4040',
+      // 最高价颜色
+      lowColor: '#1EB955' // 最低价颜色
+
     },
     tip: {
       highColor: '#FF4040',
@@ -143,33 +162,39 @@ var DEFAULTS = function DEFAULTS() {
       // 十字线是否被当前close价吸引
       color: '#979797',
       // 十字线颜色
-      dash: [],
+      dash: [5, 5],
       lineWidth: 1,
-      labelHeight: 20,
-      // 十字线标签高度
-      labelBg: 'rgba(0,0,0,0)',
-      // 十字线标签背景色
-      labelColor: 'rgba(0,0,0,0)',
-      // 十字线标签字体色
-      labelHorizPadding: 5,
-      // 十字线标签空白间距
-      posOffset: {
-        // 十字线标签偏移
-        vertical: {
-          x: 0,
-          y: 0,
-          width: 0
-        },
-        // 0 means auto
-        horizontal: {
-          x: 0,
-          y: 0,
-          width: 0
+      axisLabel: {
+        xAxisLabelPos: 'bottom',
+        yAxisLabelPos: 'right',
+        fontSize: 12,
+        height: 20,
+        // 十字线标签高度
+        bg: '#d8d8d8',
+        // 十字线标签背景色
+        color: '#666',
+        // 十字线标签字体色
+        horizPadding: 5,
+        // 十字线标签水平空白间距
+        posOffset: {
+          // 十字线标签偏移
+          yAxisLabel: {
+            x: 0,
+            y: 0
+          },
+          // 0 means auto
+          xAxisLabel: {
+            x: 0,
+            y: 0
+          }
         }
       },
-      selectedPointRadius: [8, 5, 4],
-      selectedPointColor: ['rgba(38,165,225,0.2)', '#fff', 'rgba(38,165,225,1)'] // 选中点的颜色
+      selectedPoint: {
+        radius: [8, 5, 4],
+        // 选中点的半径
+        color: ['rgba(38,165,225,0.2)', '#fff', 'rgba(38,165,225,1)'] // 选中点的颜色
 
+      }
     },
     grid: {
       bg: '#fff',
@@ -181,7 +206,7 @@ var DEFAULTS = function DEFAULTS() {
         }
       },
       // 网格线间隔调整限制
-      color: {
+      lineColor: {
         x: '#f0f0f0',
         y: '#f0f0f0'
       },
@@ -193,49 +218,60 @@ var DEFAULTS = function DEFAULTS() {
       }
     },
     axis: {
-      xAxisPos: 'bottom',
-      // position of xAxis label, Possible values: 'bottom' or 'top'
-      yAxisPos: 'right',
-      // position of yAxis label, Possible values: 'right' or 'left'
-      hideBorder: false,
+      showBorder: false,
       // 显示图表border
-      showRate: false,
-      // 显示百分比
+      borderColor: '#000',
+      bgColor: 'rgba(0,0,0,0)',
+      // 坐标轴背景色
+      // showRate: false,    // 显示百分比
       label: {
-        xAxis: {
+        top: {
+          show: false,
+          color: '#555',
+          fontSize: 12,
           offset: {
             x: 0,
-            y: 0
+            y: 10
           },
           textAlign: 'center',
           // label text align,  Possible values: refrence to CanvasRenderingContext2D.textAlign
           textBaseline: 'top' // label text baseline,  Possible values: refrence to CanvasRenderingContext2D.textBaseline
 
         },
-        yAxis: {
+        right: {
+          show: true,
+          color: '#555',
+          fontSize: 12,
           offset: {
-            x: 0,
+            x: 10,
             y: 0
           },
           textAlign: 'left',
-          // label text align,  Possible values: refrence to CanvasRenderingContext2D.textAlign
-          textBaseline: 'middle' // label text baseline,  Possible values: refrence to CanvasRenderingContext2D.textBaseline
-
+          textBaseline: 'middle'
+        },
+        bottom: {
+          show: true,
+          color: '#555',
+          fontSize: 12,
+          offset: {
+            x: 0,
+            y: 10
+          },
+          textAlign: 'center',
+          textBaseline: 'top'
+        },
+        left: {
+          show: false,
+          color: '#555',
+          fontSize: 12,
+          offset: {
+            x: 10,
+            y: 0
+          },
+          textAlign: 'left',
+          textBaseline: 'middle'
         }
-      },
-      labelColor: '#555',
-      // 设定坐标轴标签的颜色
-      labelFontSize: 16,
-      bgColor: 'rgba(0,0,0,0)',
-      // 坐标轴背景色
-      lineColor: 'rgba(0,0,0,1)',
-      // 坐标轴线颜色
-      showScale: false,
-      //是否显示刻度
-      scaleLength: 10,
-      // 刻度长度
-      showBorder: false // 是否绘制线框
-
+      }
     },
     seriesStyle: {
       // 关于数据的样式
@@ -273,6 +309,13 @@ var DEFAULTS = function DEFAULTS() {
         gradientUp: 'rgba(45,176,249,0.15)',
         // 山形内部渐变色
         gradientDown: 'rgba(19,119,240,0.02)'
+      },
+      line: {
+        // 线
+        lineWidth: 1,
+        // 价格线的粗细
+        lineColor: '#2DB0F9' // 价格线的颜色
+
       },
       column: {
         block: {
@@ -344,34 +387,6 @@ var Utils = {
       });
     }
   },
-  DataTypes: {
-    Set: function () {
-      var set = function set(d) {
-        this.d = d || [];
-      };
-
-      set.prototype.insert = function (item) {
-        if (this.d.indexOf(item) < 0) this.d.push(item);
-      };
-
-      set.prototype.remove = function (item) {
-        var index = this.d.indexOf(item);
-        if (index > -1) this.d.splice(index, 1);
-      };
-
-      set.prototype.length = function () {
-        return this.d.length;
-      };
-
-      set.prototype.forEach = function (func) {
-        this.d.forEach(func);
-      };
-
-      return function (lst) {
-        return new set(lst);
-      };
-    }()
-  },
   Math: {
     sum: function sum(lst) {
       var sum = 0;
@@ -422,6 +437,19 @@ var Utils = {
     },
     distance: function distance(point1, point2) {
       return Math.sqrt(Math.pow(point2[0] - point1[0], 2) + Math.pow(point2[1] - point1[1], 2));
+    },
+    valueFormat: function valueFormat(value, formatter) {
+      var precision = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 2;
+
+      if (value) {
+        if (formatter && Object.prototype.toString.call(formatter) === '[object Function]') {
+          return formatter(value);
+        } else {
+          return value.toFixed(precision >= 0 ? precision : 0);
+        }
+      }
+
+      return '';
     }
   },
   Draw: {
@@ -453,10 +481,9 @@ var Utils = {
       ctx.closePath();
       ctx.restore();
     },
-    Text: function Text(ctx, func, fillStyle, fontStyle, textBaseline) {
+    Text: function Text(ctx, func, fillStyle, fontStyle) {
       ctx.save();
       if (fontStyle) ctx.font = fontStyle;
-      if (textBaseline) ctx.textBaseline = textBaseline;
       ctx.fillStyle = fillStyle || 'black';
       func(ctx);
       ctx.restore();
@@ -682,8 +709,8 @@ var Utils = {
       var yMin = Number.MAX_VALUE;
       data.forEach(function (d) {
         series.forEach(function (s) {
-          var h = d[s.type === 'candlestick' || s.type === 'OHLC' ? s.h : s.valIndex];
-          var l = d[s.type === 'candlestick' || s.type === 'OHLC' ? s.l : s.valIndex];
+          var h = d[s.style === 'candlestick' || s.style === 'OHLC' ? s.highIndex : s.valIndex];
+          var l = d[s.style === 'candlestick' || s.style === 'OHLC' ? s.lowIndex : s.valIndex];
           if (h > yMax) yMax = h;
           if (l < yMin) yMin = l;
         });
@@ -722,8 +749,8 @@ var Utils = {
 
       if (yActual[0] === yActual[1]) {
         var offset = yActual[0] / 100;
-        yActual[0] -= offset || 1 / Math.pow(10, style.valuePrecision);
-        yActual[1] += offset || 0.001; // maybe better generate by precision
+        yActual[0] -= offset || (style.valuePrecision ? 1 / Math.pow(10, style.valuePrecision) : 0.001);
+        yActual[1] += offset || (style.valuePrecision ? 1 / Math.pow(10, style.valuePrecision) : 0.001); // maybe better generate by precision
       }
 
       return yActual;
@@ -853,7 +880,7 @@ function linePainter (ctx, data, coord, seriesConf, decorators) {
       if (!index) ctx.moveTo(point.x, point.y);
       ctx.lineTo(point.x, point.y);
     });
-  }, seriesConf.color);
+  }, seriesConf.style.lineColor);
 
   if (decorators && decorators.length) {
     decorators.forEach(function (d) {
@@ -870,11 +897,11 @@ var calcOHLC = function calcOHLC(data, coord, seriesConf) {
     down: []
   };
   data.forEach(function (item, index) {
-    var o = ~~Utils.Coord.linearActual2Display(item[seriesConf.o], coord.y);
-    var c = ~~Utils.Coord.linearActual2Display(item[seriesConf.c], coord.y);
-    var h = ~~Utils.Coord.linearActual2Display(item[seriesConf.h], coord.y);
-    var l = ~~Utils.Coord.linearActual2Display(item[seriesConf.l], coord.y);
-    var direction = c === o && index > 0 ? data[index - 1][seriesConf.c] < item[seriesConf.c] ? 'up' : 'down' : c < o ? 'up' : 'down';
+    var o = ~~Utils.Coord.linearActual2Display(item[seriesConf.openIndex], coord.y);
+    var c = ~~Utils.Coord.linearActual2Display(item[seriesConf.closeIndex], coord.y);
+    var h = ~~Utils.Coord.linearActual2Display(item[seriesConf.highIndex], coord.y);
+    var l = ~~Utils.Coord.linearActual2Display(item[seriesConf.lowIndex], coord.y);
+    var direction = c === o && index > 0 ? data[index - 1][seriesConf.closeIndex] < item[seriesConf.closeIndex] ? 'up' : 'down' : c < o ? 'up' : 'down';
     res[direction].push({
       x: ~~item.x,
       low: l,
@@ -914,9 +941,9 @@ function drawCandle(ctx, candles, columnWidth, blockColor, borderColor) {
 }
 
 function candlestickPainter (ctx, data, coord, seriesConf) {
-  var candles = calcOHLC(data, coord, seriesConf)
-  drawWicks(ctx, candles, seriesConf.style.candlestick.wick)
-  drawCandle(ctx, candles, coord.viewport.barWidth, seriesConf.style.candlestick.block, seriesConf.style.candlestick.border)
+  var candles = calcOHLC(data, coord, seriesConf);
+  drawWicks(ctx, candles, seriesConf.style.wick);
+  drawCandle(ctx, candles, coord.viewport.barWidth, seriesConf.style.block, seriesConf.style.border);
 }
 
 function drawOHLC(ctx, OHLC, columnWidth, ohlcColor) {
@@ -933,7 +960,7 @@ function drawOHLC(ctx, OHLC, columnWidth, ohlcColor) {
         ctx.moveTo(~~(ohlc.x - half) + 0.5, ohlc.open);
         ctx.lineTo(ohlc.x, ohlc.open);
         ctx.moveTo(~~(ohlc.x + half) + 0.5, ohlc.close);
-        ctx.lineTo(ohlc.x, ohlc.close); // ctx.rect(~~(ochl.x - half) + 0.5 , ~~Math.min(candle.open, candle.close) + 0.5, half * 2 ,~~Math.abs(candle.open - candle.close)) // + 0.02 is for IE fix
+        ctx.lineTo(ohlc.x, ohlc.close);
       });
     }, ohlcColor[direction]);
   };
@@ -945,8 +972,7 @@ function drawOHLC(ctx, OHLC, columnWidth, ohlcColor) {
 
 function ohlcPainter (ctx, data, coord, seriesConf) {
   var OHLC = calcOHLC(data, coord, seriesConf);
-  console.log('OHLC', coord);
-  drawOHLC(ctx, OHLC, coord.viewport.barWidth, seriesConf.style.OHLC);
+  drawOHLC(ctx, OHLC, coord.viewport.barWidth, seriesConf.style);
 }
 
 function columnPainter (ctx, data, coord, seriesConf, viewport) {
@@ -977,7 +1003,7 @@ function columnPainter (ctx, data, coord, seriesConf, viewport) {
           ctx.rect(~~(item.x - half) + 0.5, ~~coordY.display[0] + 0.5, half * 2, ~~(Utils.Coord.linearActual2Display(item[seriesConf.valIndex], coordY) - ~~coordY.display[0]) + 0.02);
         }
       });
-    }, seriesConf.style.column.block[direction], seriesConf.style.column.border[direction]);
+    }, seriesConf.style.block[direction], seriesConf.style.border[direction]);
   }
 }
 
@@ -1034,8 +1060,8 @@ function mountainPainter (ctx, data, coord, seriesConf) {
   decorators.push(function gradientDecorator(points, seriesConf) {
     // draw gradient
     var gradient = ctx.createLinearGradient(0, 0, 0, coord.y.display[0] - coord.y.display[1]);
-    gradient.addColorStop(0, seriesConf.style.mountain.gradientUp);
-    gradient.addColorStop(1, seriesConf.style.mountain.gradientDown);
+    gradient.addColorStop(0, seriesConf.style.gradientUp);
+    gradient.addColorStop(1, seriesConf.style.gradientDown);
     Draw.Fill(ctx, function (ctx) {
       ctx.moveTo(points[0].x, coord.y.display[0]);
       points.forEach(function (point, index) {
@@ -1119,27 +1145,40 @@ function () {
       var coord = dataProvider.coord; // draw horizontal lines
       // debugger
 
-      var hLines = style.axis.hideBorder ? coord.horizLines.slice(1, -1) : coord.horizLines;
-      console.log(hLines);
+      var hLines = coord.horizLines.slice(1, -1); // console.log(hLines)
 
       if (coord.horizLines) {
         Draw.Stroke(ctx, function (ctx) {
           hLines.forEach(function (y, index) {
-            ctx.moveTo(style.padding.left, y.display);
-            ctx.lineTo(viewport.right, y.display);
+            var ypos = index === hLines.length - 1 ? y.display : y.display - 1;
+            ctx.moveTo(viewport.left, ypos);
+            ctx.lineTo(viewport.right, ypos);
           });
-        }, style.grid.color.x);
+        }, style.grid.lineColor.x);
       }
 
-      var vLines = style.axis.hideBorder ? coord.verticalLines.slice(1, -1) : coord.verticalLines; // draw vertical lines
+      var vLines = coord.verticalLines; // draw vertical lines
 
       if (coord.verticalLines) {
         Draw.Stroke(ctx, function (ctx) {
           vLines.forEach(function (val, ind) {
-            ctx.moveTo(val.display, style.padding.top);
+            ctx.moveTo(val.display, viewport.top);
             ctx.lineTo(val.display, viewport.bottom);
           });
-        }, style.grid.color.y);
+        }, style.grid.lineColor.y);
+      }
+
+      if (style.axis.showBorder) {
+        Draw.Stroke(ctx, function (ctx) {
+          ctx.moveTo(viewport.left + 0.5, viewport.top);
+          ctx.lineTo(viewport.left + 0.5, viewport.bottom);
+          ctx.moveTo(viewport.right - 0.5, viewport.top);
+          ctx.lineTo(viewport.right - 0.5, viewport.bottom);
+          ctx.moveTo(viewport.left, viewport.top + 0.5);
+          ctx.lineTo(viewport.right, viewport.top + 0.5);
+          ctx.moveTo(viewport.left, viewport.bottom - 0.5);
+          ctx.lineTo(viewport.right, viewport.bottom - 0.5);
+        }, style.axis.borderColor);
       }
     }
   }, {
@@ -1151,24 +1190,34 @@ function () {
           dataProvider = _this$_chart2.dataProvider,
           viewport = _this$_chart2.viewport,
           dataSource = _this$_chart2.dataSource,
-          seriesInfo = _this$_chart2.seriesInfo;
+          seriesInfo = _this$_chart2.seriesInfo,
+          style = _this$_chart2.style;
       var series = seriesInfo.series,
           valueIndex = seriesInfo.valueIndex;
       var coord = dataProvider.coord,
           filteredData = dataProvider.filteredData,
           panes = dataProvider.panes;
       series.map(function (s) {
-        if (s.type === 'line' || s.type === 'mountain' || s.type === 'candlestick' || s.type === 'OHLC') {
-          chartPainter[s.type](ctx, filteredData.data, coord, s, viewport);
+        var seriesConf;
+
+        if (s.seriesType && chartPainter[s.seriesType] && s.seriesType !== 'column') {
+          seriesConf = Object.assign({}, s, {
+            style: style.seriesStyle[s.seriesType]
+          });
+          chartPainter[s.seriesType](ctx, filteredData.data, coord, seriesConf, viewport);
         }
 
-        if (s.type === 'column') {
+        if (s.seriesType === 'column') {
+          seriesConf = Object.assign({}, s, {
+            style: style.seriesStyle[s.seriesType]
+          });
+
           if (type === 'unscalable') {
-            chartPainter.panesColumn(ctx, panes, coord, s, viewport);
+            chartPainter.panesColumn(ctx, panes, coord, seriesConf, viewport);
           }
 
           if (type === 'scalable') {
-            chartPainter.column(ctx, filteredData.data, coord, s, viewport);
+            chartPainter.column(ctx, filteredData.data, coord, seriesConf, viewport);
           }
         }
       });
@@ -1187,122 +1236,94 @@ function () {
           originWidth = _this$_chart3.originWidth,
           viewport = _this$_chart3.viewport;
       var coord = dataProvider.coord;
-      this.axisClean();
-      var yAxis = {};
-      var xAxis = {}; // flag用来标识刻度的朝向
-
-      yAxis.flag = style.axis.yAxisPos === 'right' ? 1 : -1;
-      xAxis.flag = style.axis.xAxisPos === 'bottom' ? 1 : -1; // start position of the aXis
-
-      yAxis.xStart = ~yAxis.flag ? viewport.right : 0;
-      xAxis.yStart = ~xAxis.flag ? viewport.bottom : style.padding.top;
-      yAxis.scaleStart = ~yAxis.flag ? viewport.right : style.padding.left; // draw axis lines
-
-      Draw.Stroke(ctx, function (ctx) {
-        if (style.axis.showScale) {
-          coord.horizLines.forEach(function (hl) {
-            ctx.moveTo(yAxis.scaleStart, hl.display);
-            ctx.lineTo(yAxis.scaleStart + style.axis.scaleLength * yAxis.flag, hl.display);
-          });
-          coord.verticalLines.forEach(function (vl) {
-            ctx.moveTo(vl.display, xAxis.yStart);
-            ctx.lineTo(vl.display, xAxis.yStart + style.axis.scaleLength * xAxis.flag);
-          });
-          ctx.moveTo(yAxis.scaleStart + 0.5, style.padding.top);
-          ctx.lineTo(yAxis.scaleStart + 0.5, viewport.bottom);
-          ctx.moveTo(style.padding.left, xAxis.yStart + 0.5);
-          ctx.lineTo(viewport.right, xAxis.yStart + 0.5);
-        } // draw axis line
-
-
-        if (style.axis.showBorder) {
-          ctx.moveTo(yAxis.scaleStart + 0.5, style.padding.top);
-          ctx.lineTo(yAxis.scaleStart + 0.5, viewport.bottom);
-          ctx.moveTo(style.padding.left, xAxis.yStart + 0.5);
-          ctx.lineTo(viewport.right, xAxis.yStart + 0.5);
-          var xOp = ~yAxis.flag ? style.padding.left : viewport.right;
-          ctx.moveTo(xOp + 0.5, style.padding.top + 0.5);
-          ctx.lineTo(xOp + 0.5, viewport.bottom + 0.5);
-          var yOp = ~xAxis.flag ? style.padding.top : viewport.bottom;
-          ctx.moveTo(style.padding.left, yOp + 0.5);
-          ctx.lineTo(viewport.right, yOp + 0.5);
-        }
-
-        if (style.axis.showRate) {
-          var rateX = yAxis.flag > 0 ? style.padding.left : viewport.right;
-          ctx.moveTo(rateX + 0.5, style.padding.top);
-          ctx.lineTo(rateX + 0.5, viewport.bottom);
-          coord.horizLines.forEach(function (y) {
-            ctx.moveTo(rateX, y.display);
-            ctx.lineTo(rateX + style.axis.scaleLength * -yAxis.flag, y.display);
-          });
-        }
-      }, style.axis.lineColor); // draw labels
+      this.axisClean(); // draw labels
 
       var rates = {
         up: [],
-        down: []
+        down: [] // y-axis label
+
       };
-      Draw.Text(ctx, function (ctx) {
-        // y-axis label
-        coord.horizLines.forEach(function (y, index) {
-          var val = y.actual.toFixed(style.valuePrecision);
-          var xOffset = style.axis.label.yAxis.offset.x;
-          var yPos = y.display + style.axis.label.yAxis.offset.y;
-          if (yPos < 10) yPos += 10;
-          if (yPos > originHeight - 10) yPos -= 10;
-          ctx.font = style.axis.labelFontSize + 'px ' + style.font.family;
-          ctx.textAlign = style.axis.label.yAxis.textAlign;
-          ctx.textBaseline = style.axis.label.yAxis.textBaseline;
-          ctx.fillText(val, yAxis.xStart + style.axis.scaleLength + xOffset, yPos);
-        }); // x-axis label
-
-        if (type === 'scalable') {
-          // scalable
-          ctx.font = style.dateFontSize + 'px ' + style.font.family;
-          ctx.textAlign = style.axis.label.xAxis.textAlign;
-          ctx.textBaseline = style.axis.label.xAxis.textBaseline;
-          coord.verticalLines.forEach(function (x) {
-            ctx.fillText(dateFormatter(x.actual, style.dateFormat), x.display + style.axis.label.xAxis.offset.x, xAxis.yStart + style.axis.label.xAxis.offset.y * xAxis.flag);
-          });
-        } else {
-          seriesInfo.timeRanges.forEach(function (range, index) {
-            var width = viewport.right - style.padding.left;
-            var displayRange = [index * width / seriesInfo.timeRanges.length, (index + 1) * width / seriesInfo.timeRanges.length];
-
-            if (seriesInfo.timeRangesRatio) {
-              var widthRatio = seriesInfo.timeRangesRatio;
-              var prevRatio = widthRatio.slice(0, index).reduce(function (acc, x) {
-                return acc + x;
-              }, 0);
-              var ratio = widthRatio[index];
-              var left = Math.round(style.padding.left + prevRatio * width);
-              var right = Math.round(left + ratio * width);
-              displayRange = [left, right];
-            }
-
-            ctx.font = style.dateFontSize + 'px ' + style.font.family;
-            ctx.fillText(dateFormatter(range[0], style.dateFormat), displayRange[0] + 5, xAxis.yStart + style.axis.label.xAxis.offset.y * xAxis.flag);
-            var lastDateStr = dateFormatter(range[1], style.dateFormat);
-            var strWidth = ctx.measureText(lastDateStr).width;
-            ctx.fillText(lastDateStr, displayRange[1] - strWidth - 5, xAxis.yStart + style.axis.label.xAxis.offset.y * xAxis.flag);
-          });
+      ['left', 'right'].forEach(function (direction) {
+        if (style.axis.label[direction].show) {
+          Draw.Text(ctx, function (ctx) {
+            coord.horizLines.forEach(function (y, index) {
+              var val = Utils.Math.valueFormat(y.actual, style.valueFormatter, style.valuePrecision);
+              var xOffset = style.axis.label[direction].offset.x;
+              var yPos = y.display + style.axis.label[direction].offset.y;
+              if (yPos < 10) yPos += 10;
+              if (yPos > originHeight - 10) yPos -= 10;
+              ctx.font = style.axis.label[direction].fontSize + 'px ' + style.font.family;
+              ctx.textAlign = style.axis.label[direction].textAlign;
+              ctx.textBaseline = style.axis.label[direction].textBaseline;
+              ctx.fillText(val, viewport[direction] + xOffset, yPos + style.axis.label[direction].offset.y);
+            });
+          }, style.axis.label[direction].color);
         }
+      });
+      ['top', 'bottom'].forEach(function (direction) {
+        if (style.axis.label[direction].show) {
+          if (type === 'scalable') {
+            // scalable
+            Draw.Text(ctx, function (ctx) {
+              ctx.font = style.axis.label[direction].fontSize + 'px ' + style.font.family;
+              ctx.textAlign = style.axis.label[direction].textAlign;
+              ctx.textBaseline = style.axis.label[direction].textBaseline;
+              coord.verticalLines.forEach(function (x) {
+                ctx.fillText(dateFormatter(x.actual, style.dateFormat), x.display + style.axis.label[direction].offset.x, viewport[direction] + style.axis.label[direction].offset.y);
+              });
+            }, style.axis.label[direction].color);
+          } else {
+            seriesInfo.timeRanges.forEach(function (range, index) {
+              var width = viewport.right - style.padding.left;
+              var displayRange = [index * width / seriesInfo.timeRanges.length, (index + 1) * width / seriesInfo.timeRanges.length];
 
-        if (style.axis.showRate) {
-          var rateX = yAxis.flag > 0 ? 0 : viewport.right;
-          coord.horizLines.forEach(function (y, index) {
-            var val = (y.actual - seriesInfo.baseValue) / seriesInfo.baseValue;
-            var xOffset = ctx.measureText(val.toFixed(2) + '%').width + style.axis.label.yAxis.offset.x;
-            var yPos = y.display + style.axis.label.yAxis.offset.y;
-            if (yPos < 10) yPos += 10;
-            if (yPos > originHeight - 10) yPos -= 10;
-            if (val === 0) ctx.fillText(val.toFixed(2) + '%', rateX + style.axis.scaleLength + xOffset * yAxis.flag, yPos);else {
-              rates[val > 0 ? 'up' : 'down'].push([(val * 100).toFixed(2) + '%', rateX + style.axis.scaleLength + xOffset * yAxis.flag, yPos]);
-            }
-          });
+              if (seriesInfo.timeRangesRatio) {
+                var widthRatio = seriesInfo.timeRangesRatio;
+                var prevRatio = widthRatio.slice(0, index).reduce(function (acc, x) {
+                  return acc + x;
+                }, 0);
+                var ratio = widthRatio[index];
+                var left = Math.round(style.padding.left + prevRatio * width);
+                var right = Math.round(left + ratio * width);
+                displayRange = [left, right];
+              }
+
+              Draw.Text(ctx, function (ctx) {
+                ctx.font = style.axis.label[direction].fontSize + 'px ' + style.font.family;
+                ctx.textAlign = style.axis.label[direction].textAlign;
+                ctx.textBaseline = style.axis.label[direction].textBaseline;
+                ctx.fillText(dateFormatter(range[0], style.dateFormat), displayRange[0] + 5, viewport[direction] + style.axis.label[direction].offset.y);
+                var lastDateStr = dateFormatter(range[1], style.dateFormat);
+                var strWidth = ctx.measureText(lastDateStr).width;
+                ctx.fillText(lastDateStr, displayRange[1] - strWidth - 5, viewport[direction] + style.axis.label[direction].offset.y);
+              }, style.axis.label[direction].color);
+            });
+          }
         }
-      }, style.axis.labelColor);
+      }); // Draw.Text(ctx, ctx => {
+      //   if (style.axis.showRate) {
+      //     var rateX = yAxis.flag > 0 ? 0 : viewport.right
+      //     coord.horizLines.forEach((y, index) => {
+      //       var val = ((y.actual - seriesInfo.baseValue) / seriesInfo.baseValue)
+      //       var xOffset = ctx.measureText(val.toFixed(2) + '%').width + style.axis.label.yAxis.offset.x
+      //       var yPos = y.display + style.axis.label.yAxis.offset.y
+      //       if (yPos < 10)
+      //         yPos += 10
+      //       if (yPos > originHeight - 10)
+      //         yPos -= 10
+      //       if (val === 0)
+      //         ctx.fillText(val.toFixed(2) + '%',
+      //           rateX + style.axis.scaleLength + xOffset * yAxis.flag,
+      //           yPos)
+      //       else {
+      //         rates[val > 0 ? 'up' : 'down'].push([(val * 100).toFixed(2) + '%',
+      //           rateX + style.axis.scaleLength + xOffset * yAxis.flag,
+      //           yPos
+      //         ])
+      //       }
+      //     })
+      //   }
+      // }, style.axis.labelColor)
 
       for (var direction in rates) {
         Draw.Text(ctx, function (ctx) {
@@ -1345,7 +1366,7 @@ function () {
           var x = style.axis.yAxisPos === 'right' ? viewport.right : 0;
           var width = style.axis.yAxisPos === 'right' ? style.padding.right : style.padding.left;
           var last = dataSource[dataSource.length - 1];
-          var value = last[mainSeries.c || mainSeries.valIndex];
+          var value = last[mainSeries.closeIndex || mainSeries.valIndex];
 
           var _y = ~~Utils.Coord.linearActual2Display(value, coord.y);
 
@@ -1358,7 +1379,7 @@ function () {
             ctx.rect(x, _y - style.tip.currPrice.labelHeight / 2, width, style.tip.currPrice.labelHeight);
           }, style.tip.currPrice.labelBg);
           Draw.Text(ctx, function (ctx) {
-            ctx.fillText(value.toFixed(style.valuePrecision), x + style.axis.scaleLength + style.axis.label.yAxis.offset.x, _y + 5);
+            ctx.fillText(Utils.Math.valueFormat(value, style.valueFormatter, style.valuePrecision), x + style.axis.scaleLength + style.axis.label.right.offset.x, _y + 5);
           }, style.tip.currPrice.labelColor);
         }
       } // draw value range boundary
@@ -1368,9 +1389,9 @@ function () {
         var max = filteredData.data[0];
         var min = filteredData.data[0];
 
-        if (mainSeries.type === 'candlestick' || mainSeries.type === 'OHLC') {
-          var highIndex = mainSeries.h;
-          var lowIndex = mainSeries.l;
+        if (mainSeries.seriesType === 'candlestick' || mainSeries.seriesType === 'OHLC') {
+          var highIndex = mainSeries.highIndex;
+          var lowIndex = mainSeries.lowIndex;
         } else {
           highIndex = mainSeries.valIndex;
           lowIndex = mainSeries.valIndex;
@@ -1380,40 +1401,52 @@ function () {
           if (item[highIndex] > max[highIndex]) max = item;
           if (item[lowIndex] < min[lowIndex]) min = item;
         });
-        var maxVal = max[highIndex].toFixed(style.valuePrecision);
+        var maxVal = Utils.Math.valueFormat(max[highIndex], style.valueFormatter, style.valuePrecision);
         var maxY = ~~Utils.Coord.linearActual2Display(max[highIndex], coord.y) + 0.5;
-        var minVal = min[lowIndex].toFixed(style.valuePrecision);
+        var minVal = Utils.Math.valueFormat(min[lowIndex], style.valueFormatter, style.valuePrecision);
         var minY = ~~Utils.Coord.linearActual2Display(min[lowIndex], coord.y) + 0.5;
         Draw.Stroke(ctx, function (ctx) {
           if (style.valueRangeBoundary.dash) {
             ctx.setLineDash(style.valueRangeBoundary.dash);
           }
 
+          if (style.valueRangeBoundary.lineWidth) {
+            ctx.lineWidth = style.valueRangeBoundary.lineWidth;
+          }
+
           ctx.moveTo(style.padding.left, maxY);
           ctx.lineTo(viewport.right, maxY);
-        }, style.tip.highColor);
+        }, style.valueRangeBoundary.highColor);
         Draw.Stroke(ctx, function (ctx) {
           if (style.valueRangeBoundary.dash) {
             ctx.setLineDash(style.valueRangeBoundary.dash);
           }
 
+          if (style.valueRangeBoundary.lineWidth) {
+            ctx.lineWidth = style.valueRangeBoundary.lineWidth;
+          }
+
           ctx.moveTo(style.padding.left, minY);
           ctx.lineTo(viewport.right, minY);
-        }, style.tip.lowColor);
-        Draw.Text(ctx, function (ctx) {
-          var width = ctx.measureText(maxVal).width;
-          ctx.font = style.axis.labelFontSize + 'px ' + style.font.family;
-          ctx.textAlign = style.axis.label.yAxis.textAlign;
-          ctx.textBaseline = style.axis.label.yAxis.textBaseline;
-          ctx.fillText(maxVal, (style.axis.yAxisPos === 'right' ? viewport.right : 0) + style.axis.scaleLength + style.axis.label.yAxis.offset.x, maxY);
-        }, style.tip.highColor);
-        Draw.Text(ctx, function (ctx) {
-          var width = ctx.measureText(minVal).width;
-          ctx.font = style.axis.labelFontSize + 'px ' + style.font.family;
-          ctx.textAlign = style.axis.label.yAxis.textAlign;
-          ctx.textBaseline = style.axis.label.yAxis.textBaseline;
-          ctx.fillText(minVal, viewport.right + style.axis.scaleLength + style.axis.label.yAxis.offset.x, minY);
-        }, style.tip.lowColor);
+        }, style.valueRangeBoundary.lowColor);
+        ['left', 'right'].forEach(function (direction) {
+          if (style.axis.label[direction].show) {
+            Draw.Text(ctx, function (ctx) {
+              var width = ctx.measureText(maxVal).width;
+              ctx.font = style.axis.label[direction].fontSize + 'px ' + style.font.family;
+              ctx.textAlign = style.axis.label[direction].textAlign;
+              ctx.textBaseline = style.axis.label[direction].textBaseline;
+              ctx.fillText(maxVal, viewport[direction] + style.axis.label[direction].offset.x, maxY);
+            }, style.valueRangeBoundary.highColor);
+            Draw.Text(ctx, function (ctx) {
+              var width = ctx.measureText(minVal).width;
+              ctx.font = style.axis.label[direction].fontSize + 'px ' + style.font.family;
+              ctx.textAlign = style.axis.label[direction].textAlign;
+              ctx.textBaseline = style.axis.label[direction].textBaseline;
+              ctx.fillText(minVal, viewport[direction] + style.axis.label[direction].offset.x, minY);
+            }, style.valueRangeBoundary.lowColor);
+          }
+        });
       }
     }
   }, {
@@ -1462,32 +1495,31 @@ function textLabelPainter(_ref) {
       text = _ref.text,
       origin = _ref.origin,
       originPos = _ref.originPos,
-      labelHeight = _ref.labelHeight,
-      labelXPadding = _ref.labelXPadding,
-      font = _ref.font,
-      xMax = _ref.xMax,
-      yMax = _ref.yMax,
-      fontColor = _ref.fontColor,
-      labelBg = _ref.labelBg;
+      bound = _ref.bound,
+      style = _ref.style,
+      font = _ref.font;
   var labelWidth;
   Utils.Draw.Text(ctx, function (ctx) {
-    labelWidth = ctx.measureText(text).width + labelXPadding * 2;
-  }, null, font); // realOrigin origin can be use for CanvasRenderingContext2D.rect() {x:x,y:y}
+    ctx.font = style.fontSize + 'px ' + font.family;
+    labelWidth = ctx.measureText(text).width + style.horizPadding * 2;
+  }); // realOrigin origin can be use for CanvasRenderingContext2D.rect() {x:x,y:y}
 
   var realOrigin = {
     x: origin.x - originPosMap[originPos][0] * labelWidth,
-    y: origin.y - originPosMap[originPos][1] * labelHeight
+    y: origin.y - originPosMap[originPos][1] * style.height
   };
-  realOrigin.x = realOrigin.x < 0 ? 0 : realOrigin.x + labelWidth > xMax ? xMax - labelWidth : realOrigin.x;
+  realOrigin.x = realOrigin.x < 0 ? 0 : realOrigin.x + labelWidth > bound.xMax ? bound.xMax - labelWidth : realOrigin.x;
   Utils.Draw.Fill(ctx, function (ctx) {
-    ctx.rect(realOrigin.x, realOrigin.y, labelWidth, labelHeight);
-  }, labelBg); // draw x label text
+    ctx.rect(realOrigin.x, realOrigin.y, labelWidth, style.height);
+  }, style.bg); // draw x label text
 
-  var textX = realOrigin.x + labelXPadding;
-  var textY = realOrigin.y + labelHeight / 2;
+  var textX = realOrigin.x + style.horizPadding;
+  var textY = realOrigin.y + style.height / 2;
   Utils.Draw.Text(ctx, function (ctx) {
+    ctx.textBaseline = 'middle';
+    ctx.font = style.fontSize + 'px ' + font.family;
     ctx.fillText(text, textX, textY);
-  }, fontColor, font, 'middle');
+  }, style.color);
 }
 
 var rafThrottle = function rafThrottle(callback) {
@@ -1671,6 +1703,7 @@ var events = {
     }
 
     if (!chart.eventInfo.selectedItem) return;
+    var mainSeries = chart.seriesInfo.series[chart.seriesInfo.mainSeriesIndex || 0];
     Utils.Draw.Stroke(chart.iaCtx, function (ctx) {
       ctx.lineWidth = chart.style.crosshair.lineWidth || 1;
       ctx.setLineDash(chart.style.crosshair.dash); // verticalPos = e.localX
@@ -1678,7 +1711,7 @@ var events = {
       var fixOffset = ctx.lineWidth % 2 ? 0.5 : 0; // draw horizontal line
 
       if (!linked) {
-        chart.eventInfo.yPos = chart.style.crosshair.snapToData && chart.eventInfo.selectedItem ? ~~Utils.Coord.linearActual2Display(chart.eventInfo.selectedItem[chart.seriesInfo.series[0].c || chart.seriesInfo.series[0].valIndex], chart.dataProvider.coord.y) : e.localY;
+        chart.eventInfo.yPos = chart.style.crosshair.snapToData && chart.eventInfo.selectedItem ? ~~Utils.Coord.linearActual2Display(chart.eventInfo.selectedItem[mainSeries[mainSeries.snapToProp] || mainSeries.valIndex || mainSeries.closeIndex], chart.dataProvider.coord.y) : e.localY;
         ctx.moveTo(chart.viewport.left, ~~chart.eventInfo.yPos + fixOffset);
         ctx.lineTo(chart.viewport.right, ~~chart.eventInfo.yPos + fixOffset);
       }
@@ -1695,49 +1728,56 @@ var events = {
 
     var hoverTime = chart.eventInfo.selectedItem[chart.seriesInfo.timeIndex];
     var hoverTimeStr = dateFormatter(hoverTime, chart.style.dateFormat);
+    var mainSeries = chart.seriesInfo.series[chart.seriesInfo.mainSeriesIndex || 0];
     textLabelPainter({
       ctx: chart.iaCtx,
       text: hoverTimeStr,
       origin: {
-        x: chart.eventInfo.selectedItem.x,
-        y: chart.style.crosshair.posOffset.horizontal.y + (chart.style.axis.xAxisPos === 'bottom' ? chart.viewport.bottom : chart.viewport.top - chart.style.crosshair.labelHeight)
+        x: chart.style.crosshair.axisLabel.posOffset.xAxisLabel.x + chart.eventInfo.selectedItem.x,
+        y: chart.style.crosshair.axisLabel.posOffset.xAxisLabel.y + (chart.style.crosshair.axisLabel.xAxisLabelPos === 'bottom' ? chart.viewport.bottom : chart.viewport.top - chart.style.crosshair.axisLabel.height)
       },
-      originPos: 'top',
-      labelHeight: 20,
-      labelXPadding: 5,
-      font: null,
-      xMax: chart.originWidth,
-      yMax: chart.originHeight,
-      fontColor: '#666',
-      labelBg: '#efefef'
+      originPos: chart.style.crosshair.axisLabel.xAxisLabelPos === 'bottom' ? 'top' : 'bottom',
+      bound: {
+        xMax: chart.originWidth,
+        yMax: chart.originHeight
+      },
+      style: chart.style.crosshair.axisLabel,
+      font: chart.style.font
     });
     if (linked) return;
-    var horizPos = chart.style.crosshair.snapToData && chart.eventInfo.selectedItem ? ~~Utils.Coord.linearActual2Display(chart.eventInfo.selectedItem[chart.seriesInfo.series[0].c || chart.seriesInfo.series[0].valIndex], chart.dataProvider.coord.y) : e.localY;
-    var hoverValue = !linked ? Utils.Coord.linearDisplay2Actual(horizPos, chart.dataProvider.coord.y).toFixed(chart.style.valuePrecision) : 0;
+    var horizPos = chart.style.crosshair.snapToData && chart.eventInfo.selectedItem ? ~~Utils.Coord.linearActual2Display(chart.eventInfo.selectedItem[mainSeries[mainSeries.snapToProp] || mainSeries.valIndex || mainSeries.closeIndex], chart.dataProvider.coord.y) : e.localY;
+    var hoverValue;
+
+    if (!linked) {
+      hoverValue = Utils.Math.valueFormat(Utils.Coord.linearDisplay2Actual(horizPos, chart.dataProvider.coord.y), chart.style.valueFormatter, chart.style.valuePrecision);
+    } else {
+      hoverValue = 0;
+    }
+
     textLabelPainter({
       ctx: chart.iaCtx,
       text: hoverValue,
       origin: {
-        x: chart.style.crosshair.posOffset.vertical.x + (chart.style.axis.yAxisPos === 'right' ? chart.viewport.right : 0),
-        y: horizPos
+        x: chart.style.crosshair.axisLabel.posOffset.yAxisLabel.x + (chart.style.crosshair.axisLabel.yAxisLabelPos === 'right' ? chart.viewport.right : 0),
+        y: chart.style.crosshair.axisLabel.posOffset.yAxisLabel.y + horizPos
       },
-      originPos: 'left',
-      labelHeight: 20,
-      labelXPadding: 10,
-      font: null,
-      xMax: chart.originWidth,
-      yMax: chart.originHeight,
-      fontColor: '#666',
-      labelBg: '#efefef'
+      originPos: chart.style.crosshair.axisLabel.yAxisLabelPos === 'right' ? 'left' : 'right',
+      bound: {
+        xMax: chart.originWidth,
+        yMax: chart.originHeight
+      },
+      style: chart.style.crosshair.axisLabel,
+      font: chart.style.font
     });
   },
   selectDot: function selectDot(chart, e, linked) {
     // const chart = this
     if (!chart.eventInfo.selectedItem || linked) return;
-    var radius = chart.style.crosshair.selectedPointRadius;
-    chart.style.crosshair.selectedPointColor.forEach(function (color, index) {
+    var mainSeries = chart.seriesInfo.series[chart.seriesInfo.mainSeriesIndex || 0];
+    var radius = chart.style.crosshair.selectedPoint.radius;
+    chart.style.crosshair.selectedPoint.color.forEach(function (color, index) {
       Utils.Draw.Fill(chart.iaCtx, function (ctx) {
-        ctx.arc(chart.eventInfo.selectedItem.x + 0.5, Utils.Coord.linearActual2Display(chart.eventInfo.selectedItem[chart.seriesInfo.series[0].c || chart.seriesInfo.series[0].valIndex], chart.dataProvider.coord.y) - 1.5, radius[index], 0, 2 * Math.PI);
+        ctx.arc(chart.eventInfo.selectedItem.x + 0.5, Utils.Coord.linearActual2Display(chart.eventInfo.selectedItem[mainSeries[mainSeries.snapToProp] || mainSeries.valIndex || mainSeries.closeIndex], chart.dataProvider.coord.y) - 1.5, radius[index], 0, 2 * Math.PI);
       }, color);
     });
   },
@@ -2007,7 +2047,7 @@ function () {
 
       var yRange = Utils.Coord.calcYRange(this._filteredData.data, series); // yRange的初步处理，有baseValue时对称处理，最大最小值相等时增加差异
 
-      var yActual = Utils.Coord.adjustYRange(yRange, touchTop, style, viewport, baseValue, style.valuePrecision); // create coord
+      var yActual = Utils.Coord.adjustYRange(yRange, touchTop, style, viewport, baseValue); // create coord
 
       this._coord = {
         x: {
@@ -2245,6 +2285,480 @@ function () {
   return EventHandler;
 }();
 
+var _dash, _properties, _title$title$type$req;
+
+var labelProperty = {
+  show: {
+    title: 'whether show the label',
+    type: 'boolean'
+  },
+  color: {
+    title: 'label font color',
+    type: 'string'
+  },
+  fontSize: {
+    title: 'label font size',
+    type: 'number'
+  },
+  textAlign: {
+    title: 'label text align',
+    description: 'mdn: CanvasRenderingContext2D.textAlign',
+    type: 'string'
+  },
+  textBaseline: {
+    title: 'label textBaseline',
+    description: 'mdn: CanvasRenderingContext2D.textBaseline',
+    type: 'string'
+  },
+  offset: {
+    title: 'position offset for adjust title',
+    type: 'object',
+    properties: {
+      x: {
+        title: 'horizone offset',
+        type: 'number'
+      },
+      y: {
+        title: 'vertical offset',
+        type: 'number'
+      }
+    }
+  }
+};
+var updownColorProperty = {
+  up: {
+    title: 'up color',
+    type: 'string'
+  },
+  down: {
+    title: 'down color',
+    type: 'string'
+  }
+};
+var schema = (_title$title$type$req = {
+  title: 'chart-config'
+}, _defineProperty(_title$title$type$req, "title", 'lavania config'), _defineProperty(_title$title$type$req, "type", 'object'), _defineProperty(_title$title$type$req, "required", ['type']), _defineProperty(_title$title$type$req, "properties", {
+  type: {
+    title: 'chart type, use "scalable" to specify a chart that can be zoomed or paned, if scalable is defined, series.timeRanges will be ignored. use "unscalable" to specify a chart can not change viewport',
+    "enum": ['scalable', 'unscalable']
+  },
+  viewport: {
+    title: 'when chart.type is scalable, viewport will used to describe the data viewport',
+    properties: {
+      barWidth: {
+        title: 'width of each data column',
+        minimum: 4,
+        maximum: 64,
+        type: 'number'
+      },
+      offset: {
+        title: 'x-offset of the chart, change this value will make the initial viewport move left or right',
+        type: 'number'
+      }
+    }
+  },
+  valuePrecision: {
+    title: 'price precision for chart label',
+    type: 'number'
+  },
+  // valueFormatter: {
+  //   description: 'if valuePrecision is not good enough for need, you can use valueFormatter provide a function to gennerate the priceText from value',
+  //   type: 'function',
+  // },
+  dateFormat: {
+    title: 'dateFormatter to format date, can be datePattern(like "YYYY-MM-DD HH:mm:ss") or a function',
+    type: 'string'
+  },
+  font: {
+    title: 'chart font config',
+    type: 'object',
+    properties: {
+      family: {
+        title: 'font family',
+        type: 'string'
+      },
+      size: {
+        title: 'font size',
+        type: 'number'
+      }
+    }
+  },
+  padding: {
+    title: 'chart padding to canvas container',
+    type: 'object',
+    properties: {
+      left: {
+        title: 'left padding of the canvas container',
+        type: 'number'
+      },
+      right: {
+        title: 'right padding of the canvas container',
+        type: 'number'
+      },
+      top: {
+        title: 'top padding of the canvas container',
+        type: 'number'
+      },
+      bottom: {
+        title: 'bottom padding of the canvas container',
+        type: 'number'
+      }
+    }
+  },
+  zoomSpeed: {
+    title: 'speed for zoom chart when triggled by mouseWheel Event',
+    type: 'number'
+  },
+  valueRangeBoundary: {
+    title: 'line indicator for highest & lowest value in viewport',
+    type: 'object',
+    properties: {
+      show: {
+        title: 'whether show the lines ',
+        type: 'boolean'
+      },
+      dash: {
+        title: 'line dash',
+        description: 'refer to mdn: CanvasRenderingContext2D.setLineDash',
+        type: 'array'
+      },
+      lineWidth: {
+        title: 'boundary line width',
+        type: 'number'
+      },
+      highColor: {
+        title: 'line color indicate the highest value in viewport',
+        description: 'refer to mdn: CanvasRenderingContext2D.lineWidth',
+        type: 'string'
+      },
+      lowColor: {
+        title: 'line color indicate the lowest value in viewport',
+        description: 'refer to mdn: CanvasRenderingContext2D.lineWidth',
+        type: 'string'
+      }
+    }
+  },
+  crosshair: {
+    title: 'crosshair indicator for mouseMove | touch(in mobile) event',
+    type: 'object',
+    properties: {
+      snapToData: {
+        title: 'whether crosshair snap to the value or align with mouse position',
+        type: 'boolean'
+      },
+      color: {
+        title: 'crosshair line color',
+        type: 'string'
+      },
+      dash: (_dash = {
+        title: 'line dash'
+      }, _defineProperty(_dash, "title", 'refer to mdn: CanvasRenderingContext2D.setLineDash'), _defineProperty(_dash, "type", 'array'), _dash),
+      lineWidth: {
+        title: 'crosshair line width',
+        type: 'number'
+      },
+      axisLabel: {
+        title: 'axis label for the snap point',
+        type: 'object',
+        properties: (_properties = {
+          xAxisLabelPos: {
+            title: 'corsshair axis label position for x-axis, can be: bottom | top',
+            type: 'string'
+          }
+        }, _defineProperty(_properties, "xAxisLabelPos", {
+          title: 'corsshair axis label position for y-axis, can be: top | bottom',
+          type: 'string'
+        }), _defineProperty(_properties, "fontSize", {
+          title: 'corsshair axis label fontsize',
+          type: 'number'
+        }), _defineProperty(_properties, "height", {
+          title: 'corsshair axis label height',
+          type: 'number'
+        }), _defineProperty(_properties, "bg", {
+          title: 'corsshair axis label background color',
+          type: 'string'
+        }), _defineProperty(_properties, "color", {
+          title: 'corsshair axis label font-color',
+          type: 'string'
+        }), _defineProperty(_properties, "horizPadding", {
+          title: 'left & right padding of the corsshair axis label',
+          type: 'number'
+        }), _defineProperty(_properties, "posOffset", {
+          title: 'position offset for the corsshair axis label,which can used for adjust the position',
+          type: 'object',
+          properties: {
+            yAxisLabel: {
+              title: 'vertical position offset for the corsshair y-axis label, which can used for adjust the position',
+              type: 'object',
+              properties: {
+                x: {
+                  title: 'horizone offset',
+                  type: 'number'
+                },
+                y: {
+                  title: 'vertical offset',
+                  type: 'number'
+                }
+              }
+            },
+            xAxisLabel: {
+              title: 'position offset for the corsshair x-axis label, which can used for adjust the position',
+              type: 'object',
+              properties: {
+                x: {
+                  title: 'horizone offset',
+                  type: 'number'
+                },
+                y: {
+                  title: 'vertical offset',
+                  type: 'number'
+                }
+              }
+            }
+          }
+        }), _properties)
+      },
+      selectedPoint: {
+        title: 'style for selected point, define as several nested circles',
+        type: 'object',
+        properties: {
+          radius: {
+            title: 'array to describe radius of each layer',
+            type: 'array'
+          },
+          color: {
+            title: 'array to describe color of each layer',
+            type: 'array'
+          }
+        }
+      }
+    }
+  },
+  grid: {
+    title: 'style for the grid',
+    type: 'object',
+    properties: {
+      bg: {
+        title: 'background color for the grid',
+        type: 'string'
+      },
+      lineColor: {
+        title: 'line color for the grid',
+        type: 'object',
+        properties: {
+          x: {
+            title: 'color for lines parallel to the x-axis',
+            type: 'string'
+          },
+          y: {
+            title: 'color for lines parallel to the y-axis',
+            type: 'string'
+          }
+        }
+      },
+      span: {
+        title: 'span between lines of grid',
+        type: 'object',
+        properties: {
+          x: {
+            title: 'span between lines parallel to the x-axis',
+            type: 'number'
+          },
+          y: {
+            title: 'span between lines parallel to the y-axis',
+            type: 'number'
+          }
+        }
+      },
+      limit: {
+        title: 'count limit of grid lines',
+        type: 'object',
+        properties: {
+          y: {
+            title: 'count limit of  grid lines parallel to the y-axis',
+            type: 'object',
+            properties: {
+              max: {
+                title: 'max limit of  grid lines parallel to the y-axis',
+                type: 'number'
+              },
+              min: {
+                title: 'min limit of  grid lines parallel to the y-axis',
+                type: 'number'
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  axis: {
+    title: 'axis style for chart',
+    type: 'object',
+    properties: {
+      showBorder: {
+        title: 'whether show axis border',
+        type: 'boolean'
+      },
+      borderColor: {
+        title: 'color of axis border',
+        type: 'string'
+      },
+      bgColor: {
+        title: 'axis background color',
+        type: 'string'
+      },
+      label: {
+        title: 'axis background color',
+        type: 'object',
+        properties: {
+          left: {
+            title: 'label on the left side of the chart',
+            type: 'object',
+            properties: labelProperty
+          },
+          top: {
+            title: 'label on the top side of the chart',
+            type: 'object',
+            properties: labelProperty
+          },
+          right: {
+            title: 'label on the right side of the chart',
+            type: 'object',
+            properties: labelProperty
+          },
+          bottom: {
+            title: 'label on the bottom side of the chart',
+            type: 'object',
+            properties: labelProperty
+          }
+        }
+      }
+    }
+  },
+  seriesStyle: {
+    title: 'default style config for series',
+    type: 'object',
+    properties: {
+      baseValue: {
+        title: 'base value line color, base-value line will show when a series  been set baseValue',
+        type: 'string'
+      },
+      candlestick: {
+        title: 'color style for candlestick chart',
+        type: 'object',
+        properties: {
+          block: {
+            title: 'candlestock block color',
+            properties: updownColorProperty
+          },
+          border: {
+            title: 'candlestock border color',
+            properties: updownColorProperty
+          },
+          wick: {
+            title: 'candlestock wick color',
+            properties: updownColorProperty
+          }
+        }
+      },
+      OHLC: {
+        title: 'color style for OHLC chart',
+        type: 'object',
+        properties: updownColorProperty
+      },
+      mountain: {
+        title: 'color style for mountain-like chart',
+        type: 'object',
+        properties: {
+          lineWidth: {
+            title: 'mountain-like chart lineWidth',
+            type: 'number'
+          },
+          lineColor: {
+            title: 'mountain-like chart lineColor',
+            type: 'string'
+          },
+          gradientUp: {
+            title: 'first stop color for linear mountain body',
+            type: 'string'
+          },
+          gradientDown: {
+            title: 'last stop color for linear mountain body',
+            type: 'string'
+          }
+        }
+      },
+      column: {
+        title: 'color style for column chart',
+        type: 'object',
+        properties: {
+          block: {
+            title: 'column block color',
+            properties: updownColorProperty
+          },
+          border: {
+            title: 'column border color',
+            properties: updownColorProperty
+          }
+        }
+      }
+    }
+  },
+  seriesInfo: {
+    title: 'chart series config relate to data, specify which data will use to render the chart',
+    type: 'object',
+    properties: {
+      timeIndex: {
+        title: 'specify the index of time in the data, multi series will share the timeIndex',
+        type: 'number'
+      },
+      mainSeriesIndex: {
+        title: 'specify the index of the main series, main series is used for crosshair to snap to, default to 0',
+        type: 'number'
+      },
+      series: {
+        title: 'series config',
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            name: {
+              type: 'string'
+            },
+            seriesType: {
+              title: 'chart type, can be "line | mountain | candlestick | OHLC"',
+              type: 'string'
+            },
+            snapToProp: {
+              title: 'when crosshair move, specify a property which crosshair will snapto, if this prop is not defined, will try data[valIndex], if valIndex is not defined, will use data[c]',
+              type: 'string'
+            },
+            o: {
+              type: 'number'
+            },
+            c: {
+              type: 'number'
+            },
+            h: {
+              type: 'number'
+            },
+            l: {
+              type: 'number'
+            },
+            valIndex: {
+              type: 'number'
+            },
+            style: {
+              type: 'object'
+            }
+          }
+        }
+      }
+    }
+  }
+}), _title$title$type$req);
+
 var genContext = Symbol();
 var genCanvasLayer = Symbol();
 var painter = Symbol();
@@ -2270,6 +2784,7 @@ function () {
     this.linkedCharts = new Set();
     var defaults = DEFAULTS();
     this.style = merge(defaults, options);
+    this.schema = schema;
     this.seriesInfo = options.seriesInfo;
     this.confirmType();
     this.genStyle();
@@ -2289,6 +2804,11 @@ function () {
     key: "updateOption",
     value: function updateOption(newOpt) {
       this.style = merge(this.style, newOpt);
+
+      if (newOpt.seriesInfo) {
+        this.seriesInfo = merge(this.seriesInfo, newOpt.seriesInfo);
+      }
+
       this.confirmType();
       this.genStyle();
       this.dataProvider && this.dataProvider.produce();
@@ -2328,8 +2848,6 @@ function () {
   }, {
     key: "genStyle",
     value: function genStyle() {
-      var _this = this;
-
       this.ctx.font = this.style.font.size + 'px ' + this.style.font.family;
       this.iaCtx.font = this.ctx.font;
       this.viewport = Object.assign({}, this.style.viewport, {
@@ -2338,26 +2856,23 @@ function () {
         right: this.originWidth - this.style.padding.right,
         bottom: this.originHeight - this.style.padding.bottom
       });
-      this.seriesInfo.series.map(function (s) {
-        s.style = s.style || _this.style.seriesStyle;
-      });
     }
   }, {
     key: painter,
     value: function value(linked, force) {
-      var _this2 = this;
+      var _this = this;
 
       this.dataProvider && this.dataProvider.produce();
       this.clean();
       Utils.Draw.Fill(this.ctx, function (ctx) {
-        ctx.rect(0, 0, _this2.originWidth, _this2.originHeight);
+        ctx.rect(0, 0, _this.originWidth, _this.originHeight);
       }, this.style.grid.bg);
       this.render.rend(); // rerender all linked charts
 
       if (this.linkedCharts.size && !linked) {
         _toConsumableArray(this.linkedCharts).forEach(function (chart) {
-          chart.viewport.offset = _this2.viewport.offset;
-          chart.viewport.barWidth = _this2.viewport.barWidth;
+          chart.viewport.offset = _this.viewport.offset;
+          chart.viewport.barWidth = _this.viewport.barWidth;
           chart.rerender(true);
         });
       }

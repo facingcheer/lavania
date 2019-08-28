@@ -77,10 +77,9 @@ export default {
       title: 'price precision for chart label',
       type: 'number',
     },
-    // valueFormatter: {
-    //   description: 'if valuePrecision is not good enough for need, you can use valueFormatter provide a function to gennerate the priceText from value',
-    //   type: 'function',
-    // },
+    valueFormatter: {
+      description: 'if valuePrecision is not good enough for need, you can use valueFormatter provide a function to gennerate the priceText from value',
+    },
     dateFormat: {
       title: 'dateFormatter to format date, can be datePattern(like "YYYY-MM-DD HH:mm:ss") or a function',
       type: 'string'
@@ -159,8 +158,17 @@ export default {
       type: 'object',
       properties: {
         snapToData: {
-          title: 'whether crosshair snap to the value or align with mouse position',
+          title: 'whether crosshair snap to the value or align with mouse position, when set to ture, crosshair will snap to the mainSeries(set in seriesInfo.mainSeriesIndex, fallback to 0)',
           type: 'boolean',
+        },
+        // toolTip: {
+        //   title: 'callback function to create toolTip ',
+        //   type: 'any'
+        // },
+        snapProperty: {
+          title: 'when snapToData is ture, specify a property which crosshair will snapto, if this prop is not defined, will try data[valIndex], if valIndex is not defined, will use data[closeIndex]',
+          // type: 'string',
+          enum: ['valIndex', 'openIndex', 'closeIndex', 'highIndex', 'lowIndex']
         },
         color:  {
           title: 'crosshair line color',
@@ -369,6 +377,25 @@ export default {
           title: 'base value line color, base-value line will show when a series  been set baseValue',
           type: 'string'
         },
+        baseValueLine: {
+          title: 'base value line config',
+          type: 'object',
+          properties: {
+            dash: {
+              title: 'line dash',
+              description: 'refer to mdn: CanvasRenderingContext2D.setLineDash',
+              type: 'array'
+            },
+            lineWidth: {
+              title: 'line width',
+              type: 'number'
+            },
+            color: {
+              title: 'line color',
+              type: 'string'
+            }
+          }
+        },
         candlestick: {
           title: 'color style for candlestick chart',
           type: 'object',
@@ -453,11 +480,8 @@ export default {
               },
               seriesType: {
                 title: 'chart type, can be "line | mountain | candlestick | OHLC"',
-                type: 'string'
-              },
-              snapToProp: {
-                title: 'when crosshair move, specify a property which crosshair will snapto, if this prop is not defined, will try data[valIndex], if valIndex is not defined, will use data[c]',
-                type: 'string'
+                type: 'string',
+                enum: ['line', 'mountain', 'candlestick', 'OHLC']
               },
               o: {
                 type: 'number'

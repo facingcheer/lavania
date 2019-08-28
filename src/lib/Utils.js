@@ -397,8 +397,8 @@ const Utils = {
 
       data.forEach(d => {
         series.forEach(s => {
-          var h = d[s.style === 'candlestick' || s.style === 'OHLC' ? s.h : s.valIndex]
-          var l = d[s.style === 'candlestick' || s.style === 'OHLC' ? s.l : s.valIndex]
+          var h = d[s.seriesType === 'candlestick' || s.seriesType === 'OHLC' ? s.highIndex : s.valIndex]
+          var l = d[s.seriesType === 'candlestick' || s.seriesType === 'OHLC' ? s.lowIndex : s.valIndex]
 
           if (h > yMax) yMax = h
           if (l < yMin) yMin = l
@@ -429,7 +429,7 @@ const Utils = {
       let yActual = [yMin, yMax]
 
       // enlarge the actual range of vertical coord when base value line is specified
-      if (baseValue !== undefined) {
+      if (baseValue !== undefined && typeof baseValue === 'number') {
         const span = Math.max(Math.abs(baseValue - yMax), Math.abs(baseValue - yMin))
         yActual = [baseValue - span, baseValue + span]
       }
@@ -452,13 +452,13 @@ const Utils = {
     calcGridLines(actual, lineCount, baseValue) {
 
       let lines = []
-      if (baseValue === undefined) {
-        // no base value line specified
-        lines = Utils.Coord.seekNeatPoints(actual, lineCount)
-      } else {
-        // with base value line
+      if (baseValue !== undefined && typeof baseValue === 'number') {
+        // with base value lines
         let hm = Utils.Coord.seekNeatPoints([actual[0], baseValue], lineCount / 2 - 1)
          lines = [...hm.slice(0, -1), ...hm.reverse().map(h => 2 * baseValue - h)]
+      } else {
+        // no base value line specified
+        lines = Utils.Coord.seekNeatPoints(actual, lineCount)
       }
       return lines
     }

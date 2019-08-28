@@ -10,7 +10,7 @@ const DEFAULTS = function(){
     zoomSpeed: 5,    // 设定鼠标滚轮滚动单步调整的大小
     // linearLastPoint: false,    // 绘制当前价的闪烁点
     valueRangeBoundary: {
-      show: true, //显示当前范围的价格边界
+      show: false, //显示当前范围的价格边界
       dash: [10, 10],
       lineWidth: 1,
       highColor: '#FF4040',    // 最高价颜色
@@ -102,7 +102,11 @@ const DEFAULTS = function(){
       }
     },
     seriesStyle: {    // 关于数据的样式
-      baseValue: '#2DB0F9',    // 分时图昨收的颜色
+      baseValueLine: {
+        dash: [5, 5],
+        lineWidth: 1,
+        color: '#2DB0F9'
+      },
       candlestick: {    // K线图的颜色
         block: {up: '#FF4040', down: '#1EB955'},    // 蜡烛块的颜色
         border: {up: '#FF4040', down: '#1EB955'},    // 蜡烛边框颜色

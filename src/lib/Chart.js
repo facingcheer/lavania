@@ -22,7 +22,10 @@ class Chart {
     // Utils.Safe.dataCheck(dataSource)
     //  = dataSource
 
+
     const { canvasEl, iaCanvasEl} = this[genCanvasLayer](container)
+
+    this.genToolTipLayer(container)
 
     this.originWidth = canvasEl.width
     this.originHeight = canvasEl.height
@@ -133,12 +136,41 @@ class Chart {
     }
   }
 
+  genToolTipLayer(container) {
+    container.style.position = 'relative'
+    const toolTipLayer = document.createElement('div')
+    toolTipLayer.style.position = 'absolute'
+    toolTipLayer.style.left = 0
+    toolTipLayer.style.right = 0
+    toolTipLayer.style.top = 0
+    toolTipLayer.style.bottom = 0
+    toolTipLayer.style.background = 'transparent'
+    container.appendChild(toolTipLayer)
+    this.toolTipLayer = toolTipLayer
+  }
+
+  reInit(container) {
+    const { canvasEl, iaCanvasEl} = this[genCanvasLayer](container)
+
+    this.genToolTipLayer(container)
+
+    this.originWidth = canvasEl.width
+    this.originHeight = canvasEl.height
+
+    this.ctx = this[genContext](canvasEl)
+    this.iaCtx = this[genContext](iaCanvasEl)
+    this.confirmType()
+    this.genStyle()
+    this.dataProvider && this.dataProvider.produce()
+    this.rerender()
+  }
+
   confirmType() {
     this.type = this.style.type
-    if((this.seriesInfo.timeRanges && this.seriesInfo.timeRanges.length > 1 ) && this.style.type === 'scalable') {
-      this.type = 'unscalable'
-      throw 'multi timeRanges chart cannot be scalable'
-    }
+    // if((this.seriesInfo.timeRanges && this.seriesInfo.timeRanges.length > 1 ) && this.style.type === 'scalable') {
+    //   this.type = 'unscalable'
+    //   throw 'multi timeRanges chart cannot be scalable'
+    // }
   }
 
   clean(e, name, force){
