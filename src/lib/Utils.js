@@ -269,6 +269,8 @@ const Utils = {
       }
       var multiples = [1, 2, 5, 10, 20, 50]
       var points = []
+      // console.log(~~Math.log10(1/precision * 100))
+      const fixPrecision = ~~Math.log10(1/precision * 100)
       multiples.forEach(function (multiple) {
         var interval = multiple * precision
         if (!interval) return
@@ -279,28 +281,28 @@ const Utils = {
           while (x >= range[0]) {
             if (x <= range[1])
               newRange.push(x)
-            x -= interval
+            x = Number((x - interval).toFixed(fixPrecision))
           }
         } else if (range[0] > 0) {
           while (x <= range[1]) {
             if (x >= range[0])
               newRange.push(x)
-            x += interval
+            x = Number((x + interval).toFixed(fixPrecision))
           }
         } else {
           x -= interval
           while (x >= range[0]) {
             newRange.push(x)
-            x -= interval
+            x = Number((x - interval).toFixed(fixPrecision))
           }
           x = 0
           while (x <= range[1]) {
             newRange.push(x)
-            x += interval
+            x = Number((x + interval).toFixed(fixPrecision))
           }
         }
 
-        points.push([newRange[0] - interval, ...newRange, newRange[newRange.length - 1] + interval])
+        points.push([Number((newRange[0] - interval).toFixed(fixPrecision)), ...newRange,Number((newRange[newRange.length - 1] + interval).toFixed(fixPrecision))])
       })
 
       if (!points.length)
@@ -450,12 +452,16 @@ const Utils = {
       return count > limit.max ? limit.max : count < limit.min ? limit.min : count
     },
     calcGridLines(actual, lineCount, baseValue) {
-
       let lines = []
       if (baseValue !== undefined && typeof baseValue === 'number') {
         // with base value lines
         let hm = Utils.Coord.seekNeatPoints([actual[0], baseValue], lineCount / 2 - 1)
-         lines = [...hm.slice(0, -1), ...hm.reverse().map(h => 2 * baseValue - h)]
+
+        let fixPrecision = ~~Math.log10(1 / (actual[1] - actual[0]) * 100)
+
+
+         lines = [...hm.slice(0, -2), ...hm.slice(0, -1).reverse().map(h => Number((2 * baseValue - h).toFixed(fixPrecision)))]
+        //  console.log(lines)
       } else {
         // no base value line specified
         lines = Utils.Coord.seekNeatPoints(actual, lineCount)

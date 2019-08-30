@@ -28,8 +28,8 @@ export default class Render {
       Draw.Stroke(ctx, ctx => {
         hLines.forEach((y, index) => {
           let ypos = index === hLines.length - 1 ? y.display : y.display - 1
-          ctx.moveTo(viewport.left, ypos)
-          ctx.lineTo(viewport.right, ypos)
+          ctx.moveTo(viewport.left, ypos + 0.5)
+          ctx.lineTo(viewport.right, ypos + 0.5)
         })
       }, style.grid.lineColor.x)
     }
@@ -39,8 +39,8 @@ export default class Render {
     if(coord.verticalLines){
       Draw.Stroke(ctx, ctx => {
         vLines.forEach((val, ind) => {
-          ctx.moveTo(val.display, viewport.top)
-          ctx.lineTo(val.display, viewport.bottom)
+          ctx.moveTo(val.display + 0.5, viewport.top)
+          ctx.lineTo(val.display + 0.5, viewport.bottom)
         })
       }, style.grid.lineColor.y)
     }
@@ -215,9 +215,12 @@ export default class Render {
       var y = ~~Utils.Coord.linearActual2Display(seriesInfo.baseValue, coord.y)
       Draw.Stroke(ctx, ctx => {
         ctx.lineWidth = style.seriesStyle.baseValueLine.lineWidth
+        const fixOffset = (ctx.lineWidth % 2 ? 0.5 : 0)
+
         ctx.setLineDash(style.seriesStyle.baseValueLine.dash)
-        ctx.moveTo(style.padding.left, y + 0.5)
-        ctx.lineTo(viewport.right, y + 0.5)
+        // console.log('baseline', y + fixOffset)
+        ctx.moveTo(style.padding.left, y + fixOffset)
+        ctx.lineTo(viewport.right, y + fixOffset)
       }, style.seriesStyle.baseValueLine.color)
     }
 
@@ -235,10 +238,11 @@ export default class Render {
         const y = ~~Utils.Coord.linearActual2Display(value, coord.y)
 
         Draw.Stroke(ctx, ctx => {
-          ctx.lineWidth = style.tip.currPrice.lineWidth
 
-          ctx.moveTo(style.padding.left, y + 0.5)
-          ctx.lineTo(viewport.right, y + 0.5)
+          ctx.lineWidth = style.tip.currPrice.lineWidth
+          const fixOffset = (ctx.lineWidth % 2 ? 0.5 : 0)
+          ctx.moveTo(style.padding.left, y + fixOffset)
+          ctx.lineTo(viewport.right, y + fixOffset)
 
         }, style.tip.currPrice.lineColor)
 
@@ -290,8 +294,9 @@ export default class Render {
         if(style.valueRangeBoundary.lineWidth){
           ctx.lineWidth = style.valueRangeBoundary.lineWidth
         }
-        ctx.moveTo(style.padding.left, maxY)
-        ctx.lineTo(viewport.right, maxY)
+        const fixOffset = (ctx.lineWidth % 2 ? 0.5 : 0)
+        ctx.moveTo(style.padding.left, maxY + fixOffset)
+        ctx.lineTo(viewport.right, maxY + fixOffset)
       }, style.valueRangeBoundary.highColor)
 
       Draw.Stroke(ctx, ctx => {
@@ -301,8 +306,9 @@ export default class Render {
         if(style.valueRangeBoundary.lineWidth){
           ctx.lineWidth = style.valueRangeBoundary.lineWidth
         }
-        ctx.moveTo(style.padding.left, minY)
-        ctx.lineTo(viewport.right, minY)
+        const fixOffset = (ctx.lineWidth % 2 ? 0.5 : 0)
+        ctx.moveTo(style.padding.left, minY + fixOffset)
+        ctx.lineTo(viewport.right, minY + fixOffset)
       }, style.valueRangeBoundary.lowColor)
 
       ;['left', 'right'].forEach(direction => {

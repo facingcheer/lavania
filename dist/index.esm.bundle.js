@@ -2884,7 +2884,9 @@ var Utils = {
       }
 
       var multiples = [1, 2, 5, 10, 20, 50];
-      var points = [];
+      var points = []; // console.log(~~Math.log10(1/precision * 100))
+
+      var fixPrecision = ~~Math.log10(1 / precision * 100);
       multiples.forEach(function (multiple) {
         var interval = multiple * precision;
         if (!interval) return;
@@ -2894,30 +2896,30 @@ var Utils = {
         if (range[1] < 0) {
           while (x >= range[0]) {
             if (x <= range[1]) newRange.push(x);
-            x -= interval;
+            x = Number((x - interval).toFixed(fixPrecision));
           }
         } else if (range[0] > 0) {
           while (x <= range[1]) {
             if (x >= range[0]) newRange.push(x);
-            x += interval;
+            x = Number((x + interval).toFixed(fixPrecision));
           }
         } else {
           x -= interval;
 
           while (x >= range[0]) {
             newRange.push(x);
-            x -= interval;
+            x = Number((x - interval).toFixed(fixPrecision));
           }
 
           x = 0;
 
           while (x <= range[1]) {
             newRange.push(x);
-            x += interval;
+            x = Number((x + interval).toFixed(fixPrecision));
           }
         }
 
-        points.push([newRange[0] - interval].concat(newRange, [newRange[newRange.length - 1] + interval]));
+        points.push([Number((newRange[0] - interval).toFixed(fixPrecision))].concat(newRange, [Number((newRange[newRange.length - 1] + interval).toFixed(fixPrecision))]));
       });
       if (!points.length) return [];
       if (points[points.length - 1].length === 5) points.push([points[points.length - 1][0], points[points.length - 1][2], points[points.length - 1][4]]);
@@ -3066,9 +3068,10 @@ var Utils = {
       if (baseValue !== undefined && typeof baseValue === 'number') {
         // with base value lines
         var hm = Utils.Coord.seekNeatPoints([actual[0], baseValue], lineCount / 2 - 1);
-        lines = [].concat(_toConsumableArray(hm.slice(0, -1)), _toConsumableArray(hm.reverse().map(function (h) {
-          return 2 * baseValue - h;
-        })));
+        var fixPrecision = ~~Math.log10(1 / (actual[1] - actual[0]) * 100);
+        lines = [].concat(_toConsumableArray(hm.slice(0, -2)), _toConsumableArray(hm.slice(0, -1).reverse().map(function (h) {
+          return Number((2 * baseValue - h).toFixed(fixPrecision));
+        }))); //  console.log(lines)
       } else {
         // no base value line specified
         lines = Utils.Coord.seekNeatPoints(actual, lineCount);
@@ -3247,18 +3250,19 @@ function candlestickPainter (ctx, data, coord, seriesConf) {
 
 function drawOHLC(ctx, OHLC, columnWidth, ohlcColor) {
   var half = Utils.Coord.halfcandleWidth(columnWidth);
-  var lineWidth = ~~(columnWidth / 10);
+  var lineWidth = ~~(columnWidth / 10) || 1;
   if (lineWidth > 1) lineWidth += ctx.lineWidth % 2 ? 0 : 1;
 
   var _loop = function _loop(direction) {
     Draw.Stroke(ctx, function (ctx) {
       ctx.lineWidth = lineWidth;
+      var fixOffset = lineWidth % 2 ? 0.5 : 0;
       OHLC[direction].forEach(function (ohlc) {
-        ctx.moveTo(ohlc.x + 0.5, ohlc.low);
-        ctx.lineTo(ohlc.x + 0.5, ohlc.high);
-        ctx.moveTo(~~(ohlc.x - half) + 0.5, ohlc.open);
+        ctx.moveTo(ohlc.x + fixOffset, ohlc.low);
+        ctx.lineTo(ohlc.x + fixOffset, ohlc.high);
+        ctx.moveTo(~~(ohlc.x - half) + fixOffset, ohlc.open);
         ctx.lineTo(ohlc.x, ohlc.open);
-        ctx.moveTo(~~(ohlc.x + half) + 0.5, ohlc.close);
+        ctx.moveTo(~~(ohlc.x + half) + fixOffset, ohlc.close);
         ctx.lineTo(ohlc.x, ohlc.close);
       });
     }, ohlcColor[direction]);
@@ -3450,8 +3454,8 @@ function () {
         Draw.Stroke(ctx, function (ctx) {
           hLines.forEach(function (y, index) {
             var ypos = index === hLines.length - 1 ? y.display : y.display - 1;
-            ctx.moveTo(viewport.left, ypos);
-            ctx.lineTo(viewport.right, ypos);
+            ctx.moveTo(viewport.left, ypos + 0.5);
+            ctx.lineTo(viewport.right, ypos + 0.5);
           });
         }, style.grid.lineColor.x);
       }
@@ -3461,8 +3465,8 @@ function () {
       if (coord.verticalLines) {
         Draw.Stroke(ctx, function (ctx) {
           vLines.forEach(function (val, ind) {
-            ctx.moveTo(val.display, viewport.top);
-            ctx.lineTo(val.display, viewport.bottom);
+            ctx.moveTo(val.display + 0.5, viewport.top);
+            ctx.lineTo(val.display + 0.5, viewport.bottom);
           });
         }, style.grid.lineColor.y);
       }
@@ -3649,9 +3653,11 @@ function () {
         var y = ~~Utils.Coord.linearActual2Display(seriesInfo.baseValue, coord.y);
         Draw.Stroke(ctx, function (ctx) {
           ctx.lineWidth = style.seriesStyle.baseValueLine.lineWidth;
-          ctx.setLineDash(style.seriesStyle.baseValueLine.dash);
-          ctx.moveTo(style.padding.left, y + 0.5);
-          ctx.lineTo(viewport.right, y + 0.5);
+          var fixOffset = ctx.lineWidth % 2 ? 0.5 : 0;
+          ctx.setLineDash(style.seriesStyle.baseValueLine.dash); // console.log('baseline', y + fixOffset)
+
+          ctx.moveTo(style.padding.left, y + fixOffset);
+          ctx.lineTo(viewport.right, y + fixOffset);
         }, style.seriesStyle.baseValueLine.color);
       } // draw current price
       // const mainSeries = seriesInfo.series.find(s => s.main)
@@ -3670,8 +3676,9 @@ function () {
 
           Draw.Stroke(ctx, function (ctx) {
             ctx.lineWidth = style.tip.currPrice.lineWidth;
-            ctx.moveTo(style.padding.left, _y + 0.5);
-            ctx.lineTo(viewport.right, _y + 0.5);
+            var fixOffset = ctx.lineWidth % 2 ? 0.5 : 0;
+            ctx.moveTo(style.padding.left, _y + fixOffset);
+            ctx.lineTo(viewport.right, _y + fixOffset);
           }, style.tip.currPrice.lineColor);
           Draw.Fill(ctx, function (ctx) {
             ctx.rect(x, _y - style.tip.currPrice.labelHeight / 2, width, style.tip.currPrice.labelHeight);
@@ -3712,8 +3719,9 @@ function () {
             ctx.lineWidth = style.valueRangeBoundary.lineWidth;
           }
 
-          ctx.moveTo(style.padding.left, maxY);
-          ctx.lineTo(viewport.right, maxY);
+          var fixOffset = ctx.lineWidth % 2 ? 0.5 : 0;
+          ctx.moveTo(style.padding.left, maxY + fixOffset);
+          ctx.lineTo(viewport.right, maxY + fixOffset);
         }, style.valueRangeBoundary.highColor);
         Draw.Stroke(ctx, function (ctx) {
           if (style.valueRangeBoundary.dash) {
@@ -3724,8 +3732,9 @@ function () {
             ctx.lineWidth = style.valueRangeBoundary.lineWidth;
           }
 
-          ctx.moveTo(style.padding.left, minY);
-          ctx.lineTo(viewport.right, minY);
+          var fixOffset = ctx.lineWidth % 2 ? 0.5 : 0;
+          ctx.moveTo(style.padding.left, minY + fixOffset);
+          ctx.lineTo(viewport.right, minY + fixOffset);
         }, style.valueRangeBoundary.lowColor);
         ['left', 'right'].forEach(function (direction) {
           if (style.axis.label[direction].show) {
@@ -4476,7 +4485,7 @@ function () {
       var horizLines = hGridLines.map(function (val) {
         return {
           actual: val,
-          display: ~~Utils.Coord.linearActual2Display(val, _this._coord.y) + 0.5
+          display: ~~Utils.Coord.linearActual2Display(val, _this._coord.y)
         };
       });
       this._coord.horizLines = horizLines;
@@ -4506,7 +4515,7 @@ function () {
         // vertical grid line drawing for candlestick chart
         for (var l = this._filteredData.data.length - 1; l >= 0; l -= Math.round(style.grid.span.x / viewport.barWidth)) {
           if (this._filteredData.data[l].x > viewport.left && this._filteredData.data[l].x <= viewport.right) verticalLines.push({
-            display: ~~this._filteredData.data[l].x + 0.5,
+            display: ~~this._filteredData.data[l].x,
             actual: this._filteredData.data[l][timeIndex]
           });
         }

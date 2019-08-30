@@ -131,7 +131,7 @@ export default class DataProvider {
     let horizLines = hGridLines.map(val => {
       return {
         actual: val,
-        display: ~~Utils.Coord.linearActual2Display(val, this._coord.y) + 0.5
+        display: ~~Utils.Coord.linearActual2Display(val, this._coord.y)
       }
     })
     this._coord.horizLines = horizLines
@@ -159,7 +159,7 @@ export default class DataProvider {
         if (this._filteredData.data[l].x > viewport.left &&
           this._filteredData.data[l].x <= viewport.right)
           verticalLines.push({
-            display: ~~this._filteredData.data[l].x + 0.5,
+            display: ~~this._filteredData.data[l].x,
             actual: this._filteredData.data[l][timeIndex]
           })
       }

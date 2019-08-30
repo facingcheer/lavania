@@ -24,6 +24,9 @@
 	<script src="./jsoneditor.min.js"></script>
 </head>
 <style>
+	* {
+    -webkit-text-size-adjust: none;
+	}
 	body {
 		margin: 0;
 		padding: 0;
@@ -206,7 +209,7 @@
 					seriesStyle: {    // 关于数据的样式
 						baseValueLine: {
 							dash: [5, 5],
-							lineWidth: 5,
+							lineWidth: 1,
 							color: '#2DB0F9'
 						}
 					},
@@ -219,7 +222,7 @@
 						baseValue: 1.04,
 						series: [{
 							name: 'K线',
-							seriesType: 'candlestick',
+							seriesType: 'OHLC',
 							openIndex: 1,
 							closeIndex: 2,
 							highIndex: 3,
