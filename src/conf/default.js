@@ -1,6 +1,7 @@
 const DEFAULTS = function(){
   return {
     type: 'unscalable',
+    noEvents: false,
     viewport: {offset: 0, barWidth: 10},    // 图表显示的视野, width表示单个数据元素占用宽度
     valuePrecision: 4,    // 设定的数据精度,
     valueFormatter: null,
@@ -62,7 +63,7 @@ const DEFAULTS = function(){
       },    // 网格线间隔调整限制
       lineColor: {x: '#f0f0f0', y: '#f0f0f0'},    // 网格线的颜色
       span: {x: 120, y: 30}, //
-      unscalaTimeGap: 10 * 60 * 60 * 1000
+      unscalaTimeGap: 0
     },
     axis: {
       showBorder: false, // 显示图表border

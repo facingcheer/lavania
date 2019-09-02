@@ -53,8 +53,12 @@ class Chart {
 
     this.rerender()
 
-    this.events = genEvent(this, this.type)
-    this.EventHandler = new EventHandler(container, this.events)
+    if(!this.style.noEvents) {
+      this.events = genEvent(this, this.type)
+      this.EventHandler = new EventHandler(container, this.events)
+    }
+    // this.events = genEvent(this, this.type)
+    // this.EventHandler = new EventHandler(container, this.events)
   }
 
   updateOption(newOpt) {

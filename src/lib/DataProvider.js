@@ -41,7 +41,6 @@ export default class DataProvider {
     const {timeIndex, timeRanges, timeRangesRatio } = this._seriesInfo
     let chartWidth = viewport.right - viewport.left
     const paneData = Utils.Coord.datafilterByTimeRanges(this._dataSource, timeRanges, timeIndex)
-
     const paneCoords = timeRanges.map((range, index) => {
       // calc each panes position-x
       let left, right
@@ -65,11 +64,24 @@ export default class DataProvider {
       }
     })
     // calc display position x of each visiable point
-    paneData.forEach((pane, index) => {
-      pane.forEach(item => {
-        item.x = ~~Utils.Coord.linearActual2Display(item[timeIndex], paneCoords[index].x)
+
+    if(!style.seriesInfo.xByIndex) {
+      paneData.forEach((pane, index) => {
+        debugger
+        pane.forEach(item => {
+          item.x = ~~Utils.Coord.linearActual2Display(item[timeIndex], paneCoords[index].x)
+        })
       })
-    })
+    } else {
+      paneData.forEach((pane, index) => {
+        pane.forEach((item, ind) => {
+            item.x = ~~Utils.Coord.linearActual2Display(ind, {
+            display: paneCoords[index].x.display,
+            actual: [0, pane.length - 1]
+          })
+        })
+      })
+    }
 
     this._panes = paneCoords.map((paneCoord, index) => ({
       paneCoord,

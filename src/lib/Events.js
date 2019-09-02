@@ -360,12 +360,21 @@ const events = {
 const getNearest = {
   scalable(chart, xpos) {
     const filteredData = chart.dataProvider.filteredData.data.map(item => item.x)
-    for (let l = filteredData.length; l >= 0; l--) {
-      if (Math.abs(xpos - filteredData[l]) <= chart.viewport.barWidth / 2) {
-        return [chart.dataSource[l + chart.dataProvider.filteredData.leftOffset], l + chart.dataProvider.filteredData.leftOffset]
+    // for (let l = filteredData.length - 1; l >= 0; l--) {
+    //   if (Math.abs(xpos - filteredData[l]) <= chart.viewport.barWidth / 2) {
+    //     return [chart.dataSource[l + chart.dataProvider.filteredData.leftOffset], l + chart.dataProvider.filteredData.leftOffset]
+    //   }
+    // }
+    for (let l = filteredData.length - 1; l > 0; l--) {
+      if ((xpos - filteredData[l]) * (xpos - filteredData[l - 1]) < 0) {
+        if(Math.abs(xpos - filteredData[l]) < Math.abs(xpos - filteredData[l - 1])) {
+          return [chart.dataSource[l + chart.dataProvider.filteredData.leftOffset], l + chart.dataProvider.filteredData.leftOffset]
+        } else {
+          return [chart.dataSource[l - 1 + chart.dataProvider.filteredData.leftOffset], l - 1 + chart.dataProvider.filteredData.leftOffset]
+        }
       }
     }
-    // console.log(event.localX, filteredData, chart.viewport.barWidth)
+    console.log(event.localX, filteredData, chart.viewport.barWidth)
   },
 
   unscalable(chart, xpos) {
@@ -390,12 +399,14 @@ const getNearest = {
     const filteredData = chart.dataProvider.panes.map(pane => pane.paneData)
     // console.log(filteredData,rangeIndex)
 
-    for (let l = filteredData[rangeIndex].length - 1; l >= 0; l--) {
-      var halfWidth = (filteredData[rangeIndex][1].x - filteredData[rangeIndex][0].x) / 2
-      halfWidth = halfWidth < 1 ? 1 : halfWidth
-      // console.log(l,filteredData[rangeIndex])
-      if (Math.abs(xpos - filteredData[rangeIndex][l].x) <= halfWidth) {
-        return [filteredData[rangeIndex][l], l]
+    for (let l = filteredData[rangeIndex].length - 1; l > 0; l--) {
+
+      if ((xpos - filteredData[rangeIndex][l].x) * (xpos - filteredData[rangeIndex][l - 1].x) < 0) {
+        if(Math.abs(xpos - filteredData[rangeIndex][l].x) < Math.abs(xpos - filteredData[rangeIndex][l - 1].x)) {
+          return [filteredData[rangeIndex][l], l]
+        } else {
+          return [filteredData[rangeIndex][l-1], l-1]
+        }
       }
     }
   }

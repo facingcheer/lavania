@@ -58,6 +58,10 @@ export default {
       title: 'chart type, use "scalable" to specify a chart that can be zoomed or paned, if scalable is defined, series.timeRanges will be ignored. use "unscalable" to specify a chart can not change viewport',
       enum: ['scalable', 'unscalable']
     },
+    noEvents: {
+      title: 'whether forbid events',
+      type: 'boolean'
+    },
     viewport: {
       title: 'when chart.type is scalable, viewport will used to describe the data viewport',
       properties: {
@@ -477,6 +481,10 @@ export default {
           title: 'specify the index of time in the data, multi series will share the timeIndex',
           type: 'number',
         },
+        xByIndex: {
+          title: 'x-axis increase by index insdead of time',
+          type: 'boolean'
+        },
         mainSeriesIndex: {
           title: 'specify the index of the main series, main series is used for crosshair to snap to, default to 0',
           type: 'number',
@@ -495,16 +503,17 @@ export default {
                 type: 'string',
                 enum: ['line', 'mountain', 'candlestick', 'OHLC']
               },
-              o: {
+
+              openIndex: {
                 type: 'number'
               },
-              c: {
+              closeIndex: {
                 type: 'number'
               },
-              h: {
+              highIndex: {
                 type: 'number'
               },
-              l: {
+              lowIndex: {
                 type: 'number'
               },
               valIndex: {

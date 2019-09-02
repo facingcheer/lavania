@@ -105,6 +105,7 @@ function _nonIterableRest() {
 var DEFAULTS = function DEFAULTS() {
   return {
     type: 'unscalable',
+    noEvents: false,
     viewport: {
       offset: 0,
       barWidth: 10
@@ -218,7 +219,7 @@ var DEFAULTS = function DEFAULTS() {
         y: 30
       },
       //
-      unscalaTimeGap: 10 * 60 * 60 * 1000
+      unscalaTimeGap: 0
     },
     axis: {
       showBorder: false,
@@ -1960,14 +1961,23 @@ var getNearest = {
   scalable: function scalable(chart, xpos) {
     var filteredData = chart.dataProvider.filteredData.data.map(function (item) {
       return item.x;
-    });
+    }); // for (let l = filteredData.length - 1; l >= 0; l--) {
+    //   if (Math.abs(xpos - filteredData[l]) <= chart.viewport.barWidth / 2) {
+    //     return [chart.dataSource[l + chart.dataProvider.filteredData.leftOffset], l + chart.dataProvider.filteredData.leftOffset]
+    //   }
+    // }
 
-    for (var l = filteredData.length; l >= 0; l--) {
-      if (Math.abs(xpos - filteredData[l]) <= chart.viewport.barWidth / 2) {
-        return [chart.dataSource[l + chart.dataProvider.filteredData.leftOffset], l + chart.dataProvider.filteredData.leftOffset];
+    for (var l = filteredData.length - 1; l > 0; l--) {
+      if ((xpos - filteredData[l]) * (xpos - filteredData[l - 1]) < 0) {
+        if (Math.abs(xpos - filteredData[l]) < Math.abs(xpos - filteredData[l - 1])) {
+          return [chart.dataSource[l + chart.dataProvider.filteredData.leftOffset], l + chart.dataProvider.filteredData.leftOffset];
+        } else {
+          return [chart.dataSource[l - 1 + chart.dataProvider.filteredData.leftOffset], l - 1 + chart.dataProvider.filteredData.leftOffset];
+        }
       }
-    } // console.log(event.localX, filteredData, chart.viewport.barWidth)
+    }
 
+    console.log(event.localX, filteredData, chart.viewport.barWidth);
   },
   unscalable: function unscalable(chart, xpos) {
     var rangeIndex = 0; // multiRange charts has diffrent scales in diffrent ratio parts
@@ -1995,12 +2005,13 @@ var getNearest = {
       return pane.paneData;
     }); // console.log(filteredData,rangeIndex)
 
-    for (var l = filteredData[rangeIndex].length - 1; l >= 0; l--) {
-      var halfWidth = (filteredData[rangeIndex][1].x - filteredData[rangeIndex][0].x) / 2;
-      halfWidth = halfWidth < 1 ? 1 : halfWidth; // console.log(l,filteredData[rangeIndex])
-
-      if (Math.abs(xpos - filteredData[rangeIndex][l].x) <= halfWidth) {
-        return [filteredData[rangeIndex][l], l];
+    for (var l = filteredData[rangeIndex].length - 1; l > 0; l--) {
+      if ((xpos - filteredData[rangeIndex][l].x) * (xpos - filteredData[rangeIndex][l - 1].x) < 0) {
+        if (Math.abs(xpos - filteredData[rangeIndex][l].x) < Math.abs(xpos - filteredData[rangeIndex][l - 1].x)) {
+          return [filteredData[rangeIndex][l], l];
+        } else {
+          return [filteredData[rangeIndex][l - 1], l - 1];
+        }
       }
     }
   }
@@ -2115,11 +2126,24 @@ function () {
         };
       }); // calc display position x of each visiable point
 
-      paneData.forEach(function (pane, index) {
-        pane.forEach(function (item) {
-          item.x = ~~Utils.Coord.linearActual2Display(item[timeIndex], paneCoords[index].x);
+      if (!style.seriesInfo.xByIndex) {
+        paneData.forEach(function (pane, index) {
+          debugger;
+          pane.forEach(function (item) {
+            item.x = ~~Utils.Coord.linearActual2Display(item[timeIndex], paneCoords[index].x);
+          });
         });
-      });
+      } else {
+        paneData.forEach(function (pane, index) {
+          pane.forEach(function (item, ind) {
+            item.x = ~~Utils.Coord.linearActual2Display(ind, {
+              display: paneCoords[index].x.display,
+              actual: [0, pane.length - 1]
+            });
+          });
+        });
+      }
+
       this._panes = paneCoords.map(function (paneCoord, index) {
         return {
           paneCoord: paneCoord,
@@ -2465,6 +2489,10 @@ var schema = (_title$title$type$req = {
   type: {
     title: 'chart type, use "scalable" to specify a chart that can be zoomed or paned, if scalable is defined, series.timeRanges will be ignored. use "unscalable" to specify a chart can not change viewport',
     "enum": ['scalable', 'unscalable']
+  },
+  noEvents: {
+    title: 'whether forbid events',
+    type: 'boolean'
   },
   viewport: {
     title: 'when chart.type is scalable, viewport will used to describe the data viewport',
@@ -2876,6 +2904,10 @@ var schema = (_title$title$type$req = {
         title: 'specify the index of time in the data, multi series will share the timeIndex',
         type: 'number'
       },
+      xByIndex: {
+        title: 'x-axis increase by index insdead of time',
+        type: 'boolean'
+      },
       mainSeriesIndex: {
         title: 'specify the index of the main series, main series is used for crosshair to snap to, default to 0',
         type: 'number'
@@ -2894,16 +2926,16 @@ var schema = (_title$title$type$req = {
               type: 'string',
               "enum": ['line', 'mountain', 'candlestick', 'OHLC']
             },
-            o: {
+            openIndex: {
               type: 'number'
             },
-            c: {
+            closeIndex: {
               type: 'number'
             },
-            h: {
+            highIndex: {
               type: 'number'
             },
-            l: {
+            lowIndex: {
               type: 'number'
             },
             valIndex: {
@@ -2957,8 +2989,13 @@ function () {
     }
 
     this.rerender();
-    this.events = genEvent(this, this.type);
-    this.EventHandler = new EventHandler(container, this.events);
+
+    if (!this.style.noEvents) {
+      this.events = genEvent(this, this.type);
+      this.EventHandler = new EventHandler(container, this.events);
+    } // this.events = genEvent(this, this.type)
+    // this.EventHandler = new EventHandler(container, this.events)
+
   }
 
   _createClass(Chart, [{
