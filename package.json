@@ -1,6 +1,6 @@
 {
   "name": "lavania",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "js tools, easy to use",
   "main": "dist/index.js",
   "scripts": {
