@@ -124,7 +124,7 @@ var DEFAULTS = function DEFAULTS() {
     // 设定鼠标滚轮滚动单步调整的大小
     // linearLastPoint: false,    // 绘制当前价的闪烁点
     valueRangeBoundary: {
-      show: true,
+      show: false,
       //显示当前范围的价格边界
       dash: [10, 10],
       lineWidth: 1,
@@ -269,8 +269,11 @@ var DEFAULTS = function DEFAULTS() {
     },
     seriesStyle: {
       // 关于数据的样式
-      baseValue: '#2DB0F9',
-      // 分时图昨收的颜色
+      baseValueLine: {
+        dash: [5, 5],
+        lineWidth: 1,
+        color: '#2DB0F9'
+      },
       candlestick: {
         // K线图的颜色
         block: {
@@ -579,7 +582,9 @@ var Utils = {
       }
 
       var multiples = [1, 2, 5, 10, 20, 50];
-      var points = [];
+      var points = []; // console.log(~~Math.log10(1/precision * 100))
+
+      var fixPrecision = ~~Math.log10(1 / precision * 100);
       multiples.forEach(function (multiple) {
         var interval = multiple * precision;
         if (!interval) return;
@@ -589,30 +594,30 @@ var Utils = {
         if (range[1] < 0) {
           while (x >= range[0]) {
             if (x <= range[1]) newRange.push(x);
-            x -= interval;
+            x = Number((x - interval).toFixed(fixPrecision));
           }
         } else if (range[0] > 0) {
           while (x <= range[1]) {
             if (x >= range[0]) newRange.push(x);
-            x += interval;
+            x = Number((x + interval).toFixed(fixPrecision));
           }
         } else {
           x -= interval;
 
           while (x >= range[0]) {
             newRange.push(x);
-            x -= interval;
+            x = Number((x - interval).toFixed(fixPrecision));
           }
 
           x = 0;
 
           while (x <= range[1]) {
             newRange.push(x);
-            x += interval;
+            x = Number((x + interval).toFixed(fixPrecision));
           }
         }
 
-        points.push([newRange[0] - interval].concat(newRange, [newRange[newRange.length - 1] + interval]));
+        points.push([Number((newRange[0] - interval).toFixed(fixPrecision))].concat(newRange, [Number((newRange[newRange.length - 1] + interval).toFixed(fixPrecision))]));
       });
       if (!points.length) return [];
       if (points[points.length - 1].length === 5) points.push([points[points.length - 1][0], points[points.length - 1][2], points[points.length - 1][4]]);
@@ -703,8 +708,8 @@ var Utils = {
       var yMin = Number.MAX_VALUE;
       data.forEach(function (d) {
         series.forEach(function (s) {
-          var h = d[s.style === 'candlestick' || s.style === 'OHLC' ? s.highIndex : s.valIndex];
-          var l = d[s.style === 'candlestick' || s.style === 'OHLC' ? s.lowIndex : s.valIndex];
+          var h = d[s.seriesType === 'candlestick' || s.seriesType === 'OHLC' ? s.highIndex : s.valIndex];
+          var l = d[s.seriesType === 'candlestick' || s.seriesType === 'OHLC' ? s.lowIndex : s.valIndex];
           if (h > yMax) yMax = h;
           if (l < yMin) yMin = l;
         });
@@ -736,7 +741,7 @@ var Utils = {
 
       var yActual = [yMin, yMax]; // enlarge the actual range of vertical coord when base value line is specified
 
-      if (baseValue !== undefined) {
+      if (baseValue !== undefined && typeof baseValue === 'number') {
         var span = Math.max(Math.abs(baseValue - yMax), Math.abs(baseValue - yMin));
         yActual = [baseValue - span, baseValue + span];
       }
@@ -758,15 +763,16 @@ var Utils = {
     calcGridLines: function calcGridLines(actual, lineCount, baseValue) {
       var lines = [];
 
-      if (baseValue === undefined) {
+      if (baseValue !== undefined && typeof baseValue === 'number') {
+        // with base value lines
+        var hm = Utils.Coord.seekNeatPoints([actual[0], baseValue], lineCount / 2 - 1);
+        var fixPrecision = ~~Math.log10(1 / (actual[1] - actual[0]) * 100);
+        lines = [].concat(_toConsumableArray(hm.slice(0, -2)), _toConsumableArray(hm.slice(0, -1).reverse().map(function (h) {
+          return Number((2 * baseValue - h).toFixed(fixPrecision));
+        }))); //  console.log(lines)
+      } else {
         // no base value line specified
         lines = Utils.Coord.seekNeatPoints(actual, lineCount);
-      } else {
-        // with base value line
-        var hm = Utils.Coord.seekNeatPoints([actual[0], baseValue], lineCount / 2 - 1);
-        lines = [].concat(_toConsumableArray(hm.slice(0, -1)), _toConsumableArray(hm.reverse().map(function (h) {
-          return 2 * baseValue - h;
-        })));
       }
 
       return lines;
@@ -942,18 +948,19 @@ function candlestickPainter (ctx, data, coord, seriesConf) {
 
 function drawOHLC(ctx, OHLC, columnWidth, ohlcColor) {
   var half = Utils.Coord.halfcandleWidth(columnWidth);
-  var lineWidth = ~~(columnWidth / 10);
+  var lineWidth = ~~(columnWidth / 10) || 1;
   if (lineWidth > 1) lineWidth += ctx.lineWidth % 2 ? 0 : 1;
 
   var _loop = function _loop(direction) {
     Draw.Stroke(ctx, function (ctx) {
       ctx.lineWidth = lineWidth;
+      var fixOffset = lineWidth % 2 ? 0.5 : 0;
       OHLC[direction].forEach(function (ohlc) {
-        ctx.moveTo(ohlc.x + 0.5, ohlc.low);
-        ctx.lineTo(ohlc.x + 0.5, ohlc.high);
-        ctx.moveTo(~~(ohlc.x - half) + 0.5, ohlc.open);
+        ctx.moveTo(ohlc.x + fixOffset, ohlc.low);
+        ctx.lineTo(ohlc.x + fixOffset, ohlc.high);
+        ctx.moveTo(~~(ohlc.x - half) + fixOffset, ohlc.open);
         ctx.lineTo(ohlc.x, ohlc.open);
-        ctx.moveTo(~~(ohlc.x + half) + 0.5, ohlc.close);
+        ctx.moveTo(~~(ohlc.x + half) + fixOffset, ohlc.close);
         ctx.lineTo(ohlc.x, ohlc.close);
       });
     }, ohlcColor[direction]);
@@ -1145,8 +1152,8 @@ function () {
         Draw.Stroke(ctx, function (ctx) {
           hLines.forEach(function (y, index) {
             var ypos = index === hLines.length - 1 ? y.display : y.display - 1;
-            ctx.moveTo(viewport.left, ypos);
-            ctx.lineTo(viewport.right, ypos);
+            ctx.moveTo(viewport.left, ypos + 0.5);
+            ctx.lineTo(viewport.right, ypos + 0.5);
           });
         }, style.grid.lineColor.x);
       }
@@ -1156,8 +1163,8 @@ function () {
       if (coord.verticalLines) {
         Draw.Stroke(ctx, function (ctx) {
           vLines.forEach(function (val, ind) {
-            ctx.moveTo(val.display, viewport.top);
-            ctx.lineTo(val.display, viewport.bottom);
+            ctx.moveTo(val.display + 0.5, viewport.top);
+            ctx.lineTo(val.display + 0.5, viewport.bottom);
           });
         }, style.grid.lineColor.y);
       }
@@ -1340,20 +1347,21 @@ function () {
       var filteredData = dataProvider.filteredData,
           coord = dataProvider.coord;
 
-      if (seriesInfo.timeRanges !== undefined && seriesInfo.baseValue !== undefined) {
+      if (seriesInfo.baseValue !== undefined && typeof seriesInfo.baseValue === 'number') {
         var y = ~~Utils.Coord.linearActual2Display(seriesInfo.baseValue, coord.y);
         Draw.Stroke(ctx, function (ctx) {
-          ctx.lineWidth = 2;
-          ctx.setLineDash([5, 5]);
-          ctx.moveTo(style.padding.left, y);
-          ctx.lineTo(viewport.right, y);
-        }, style.seriesStyle.baseValue);
+          ctx.lineWidth = style.seriesStyle.baseValueLine.lineWidth;
+          var fixOffset = ctx.lineWidth % 2 ? 0.5 : 0;
+          ctx.setLineDash(style.seriesStyle.baseValueLine.dash); // console.log('baseline', y + fixOffset)
+
+          ctx.moveTo(style.padding.left, y + fixOffset);
+          ctx.lineTo(viewport.right, y + fixOffset);
+        }, style.seriesStyle.baseValueLine.color);
       } // draw current price
+      // const mainSeries = seriesInfo.series.find(s => s.main)
 
 
-      var mainSeries = seriesInfo.series.find(function (s) {
-        return s.main;
-      });
+      var mainSeries = seriesInfo.series[seriesInfo.mainSeriesIndex || 0];
 
       if (dataSource.length > 0) {
         if (mainSeries) {
@@ -1366,8 +1374,9 @@ function () {
 
           Draw.Stroke(ctx, function (ctx) {
             ctx.lineWidth = style.tip.currPrice.lineWidth;
-            ctx.moveTo(style.padding.left, _y + 0.5);
-            ctx.lineTo(viewport.right, _y + 0.5);
+            var fixOffset = ctx.lineWidth % 2 ? 0.5 : 0;
+            ctx.moveTo(style.padding.left, _y + fixOffset);
+            ctx.lineTo(viewport.right, _y + fixOffset);
           }, style.tip.currPrice.lineColor);
           Draw.Fill(ctx, function (ctx) {
             ctx.rect(x, _y - style.tip.currPrice.labelHeight / 2, width, style.tip.currPrice.labelHeight);
@@ -1408,8 +1417,9 @@ function () {
             ctx.lineWidth = style.valueRangeBoundary.lineWidth;
           }
 
-          ctx.moveTo(style.padding.left, maxY);
-          ctx.lineTo(viewport.right, maxY);
+          var fixOffset = ctx.lineWidth % 2 ? 0.5 : 0;
+          ctx.moveTo(style.padding.left, maxY + fixOffset);
+          ctx.lineTo(viewport.right, maxY + fixOffset);
         }, style.valueRangeBoundary.highColor);
         Draw.Stroke(ctx, function (ctx) {
           if (style.valueRangeBoundary.dash) {
@@ -1420,8 +1430,9 @@ function () {
             ctx.lineWidth = style.valueRangeBoundary.lineWidth;
           }
 
-          ctx.moveTo(style.padding.left, minY);
-          ctx.lineTo(viewport.right, minY);
+          var fixOffset = ctx.lineWidth % 2 ? 0.5 : 0;
+          ctx.moveTo(style.padding.left, minY + fixOffset);
+          ctx.lineTo(viewport.right, minY + fixOffset);
         }, style.valueRangeBoundary.lowColor);
         ['left', 'right'].forEach(function (direction) {
           if (style.axis.label[direction].show) {
@@ -1548,8 +1559,7 @@ var rafThrottle = function rafThrottle(callback) {
 };
 
 function genEvent(chart, type) {
-  var e = {}; // eslint-disable-next-line camelcase
-
+  var e = {};
   chart.eventInfo = {
     selectedItem: null,
     selectedIndex: null,
@@ -1591,7 +1601,7 @@ var eventSource = {
         args[_key] = arguments[_key];
       }
 
-      _processEventUnits(['clean', 'crosshair', 'axisLabel', 'selectDot'], args);
+      _processEventUnits(['clean', 'crosshair', 'axisLabel', 'selectDot', 'toolTip'], args);
     },
     mouseLeaveEvent: function mouseLeaveEvent() {
       for (var _len2 = arguments.length, args = new Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
@@ -1704,8 +1714,17 @@ var events = {
 
       var fixOffset = ctx.lineWidth % 2 ? 0.5 : 0; // draw horizontal line
 
+      var snapPointIndex;
+
+      if (chart.style.crosshair.snapProperty && mainSeries[chart.style.crosshair.snapProperty]) {
+        snapPointIndex = mainSeries[chart.style.crosshair.snapProperty];
+      } else {
+        snapPointIndex = mainSeries['valIndex'];
+      } // if(!snapPointIndex) return
+
+
       if (!linked) {
-        chart.eventInfo.yPos = chart.style.crosshair.snapToData && chart.eventInfo.selectedItem ? ~~Utils.Coord.linearActual2Display(chart.eventInfo.selectedItem[mainSeries[mainSeries.snapToProp] || mainSeries.valIndex || mainSeries.closeIndex], chart.dataProvider.coord.y) : e.localY;
+        chart.eventInfo.yPos = chart.style.crosshair.snapToData && snapPointIndex && chart.eventInfo.selectedItem ? ~~Utils.Coord.linearActual2Display(chart.eventInfo.selectedItem[snapPointIndex], chart.dataProvider.coord.y) : e.localY;
         ctx.moveTo(chart.viewport.left, ~~chart.eventInfo.yPos + fixOffset);
         ctx.lineTo(chart.viewport.right, ~~chart.eventInfo.yPos + fixOffset);
       }
@@ -1739,7 +1758,16 @@ var events = {
       font: chart.style.font
     });
     if (linked) return;
-    var horizPos = chart.style.crosshair.snapToData && chart.eventInfo.selectedItem ? ~~Utils.Coord.linearActual2Display(chart.eventInfo.selectedItem[mainSeries[mainSeries.snapToProp] || mainSeries.valIndex || mainSeries.closeIndex], chart.dataProvider.coord.y) : e.localY;
+    var snapPointIndex;
+
+    if (chart.style.crosshair.snapProperty && mainSeries[chart.style.crosshair.snapProperty]) {
+      snapPointIndex = mainSeries[chart.style.crosshair.snapProperty];
+    } else {
+      snapPointIndex = mainSeries['valIndex'];
+    }
+
+    if (!snapPointIndex) return;
+    var horizPos = chart.style.crosshair.snapToData && chart.eventInfo.selectedItem ? ~~Utils.Coord.linearActual2Display(chart.eventInfo.selectedItem[snapPointIndex], chart.dataProvider.coord.y) : e.localY;
     var hoverValue;
 
     if (!linked) {
@@ -1766,14 +1794,54 @@ var events = {
   },
   selectDot: function selectDot(chart, e, linked) {
     // const chart = this
-    if (!chart.eventInfo.selectedItem || linked) return;
+    if (!chart.eventInfo.selectedItem || !chart.style.crosshair.snapToData) return;
     var mainSeries = chart.seriesInfo.series[chart.seriesInfo.mainSeriesIndex || 0];
+    var snapPointIndex;
+
+    if (chart.style.crosshair.snapProperty && mainSeries[chart.style.crosshair.snapProperty]) {
+      snapPointIndex = mainSeries[chart.style.crosshair.snapProperty];
+    } else {
+      snapPointIndex = mainSeries['valIndex'];
+    }
+
+    if (!snapPointIndex) return;
     var radius = chart.style.crosshair.selectedPoint.radius;
     chart.style.crosshair.selectedPoint.color.forEach(function (color, index) {
       Utils.Draw.Fill(chart.iaCtx, function (ctx) {
-        ctx.arc(chart.eventInfo.selectedItem.x + 0.5, Utils.Coord.linearActual2Display(chart.eventInfo.selectedItem[mainSeries[mainSeries.snapToProp] || mainSeries.valIndex || mainSeries.closeIndex], chart.dataProvider.coord.y) - 1.5, radius[index], 0, 2 * Math.PI);
+        ctx.arc(chart.eventInfo.selectedItem.x + 0.5, Utils.Coord.linearActual2Display(chart.eventInfo.selectedItem[snapPointIndex], chart.dataProvider.coord.y) - 1.5, radius[index], 0, 2 * Math.PI);
       }, color);
     });
+  },
+  toolTip: function toolTip(chart, e, linked) {
+    if (!chart.eventInfo.selectedItem) return;
+    chart.toolTipLayer.innerHTML = '';
+    var d = document.createElement('div');
+    if (!chart.style.crosshair.toolTip || Object.prototype.toString.call(chart.style.crosshair.toolTip) !== '[object Function]') return;
+    chart.style.crosshair.toolTip(chart.eventInfo, function (dom) {
+      d.innerHTML = dom;
+      d.style.position = 'absolute';
+      d.style.left = 0;
+      d.style.visibility = 'hidden';
+      d.style.top = 0;
+      chart.toolTipLayer.appendChild(d);
+
+      var _calcBoxPositionInBou = calcBoxPositionInBounding({
+        x: chart.eventInfo.xPos,
+        y: chart.eventInfo.yPos
+      }, {
+        width: d.clientWidth,
+        height: d.clientHeight
+      }, {
+        width: chart.toolTipLayer.clientWidth,
+        height: chart.toolTipLayer.clientHeight
+      }),
+          left = _calcBoxPositionInBou.left,
+          top = _calcBoxPositionInBou.top;
+
+      d.style.left = left + 'px';
+      d.style.top = top + 'px';
+      d.style.visibility = 'visible';
+    }); // console.log(d, d.offsetHeight, d.offsetWidth)
   },
   panStart: function panStart(chart, e, linked) {
     if (linked) return;
@@ -1799,7 +1867,7 @@ var events = {
     chart.eventInfo.pinchStart.barWidth = chart.viewport.barWidth;
     chart.eventInfo.pinchStart.center = e.center;
 
-    var _ref5 = getNearest[chart.seriesInfo.timeRanges ? 'unscalable' : 'scalable'](chart, e.center.x) || [null, null],
+    var _ref5 = getNearest[chart.type](chart, e.center.x) || [null, null],
         _ref6 = _slicedToArray(_ref5, 2),
         selectedItem = _ref6[0],
         selectedIndex = _ref6[1];
@@ -1811,7 +1879,6 @@ var events = {
     if (linked) return;
 
     if (!chart.eventInfo.selectedItem || !chart.eventInfo.selectedIndex) {
-      console.log('no select');
       return;
     }
 
@@ -1841,6 +1908,10 @@ var events = {
     console.log(pinchPoint, scale);
   },
   clean: function clean(chart, e, linked) {
+    if (chart.toolTipLayer) {
+      chart.toolTipLayer.innerHTML = '';
+    }
+
     chart.iaCtx.clearRect(0, 0, chart.originWidth, chart.originHeight);
   },
   pinch: function pinch(chart, e, linked) {
@@ -1850,13 +1921,12 @@ var events = {
     if (linked) return;
     var zoomScale = Math.sign(e.deltaY) * Math.min(1, Math.abs(e.deltaY));
 
-    var _ref7 = getNearest[chart.seriesInfo.timeRanges ? 'unscalable' : 'scalable'](chart, e.localX) || [null, null],
+    var _ref7 = getNearest[chart.type](chart, e.localX) || [null, null],
         _ref8 = _slicedToArray(_ref7, 2),
         selectedItem = _ref8[0],
         selectedIndex = _ref8[1];
 
     if (!selectedIndex || !selectedItem) {
-      console.log('no select');
       return;
     }
 
@@ -1930,6 +2000,42 @@ function _processEventUnits(units, args) {
   units.forEach(function (name) {
     return events[name] && events[name].apply(events, _toConsumableArray(args));
   });
+}
+
+function calcBoxPositionInBounding(origin, box, bounding) {
+  var minMargin = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : 20;
+  var horizPos, verticalPos;
+
+  if (origin.x + box.width + minMargin < bounding.width) {
+    //can set in right
+    horizPos = origin.x + minMargin;
+  } else {
+    // set in left
+    if (origin.x - box.width - minMargin < 0) {
+      // alert('tooltip is too wide to set in chart')
+      horizPos = bounding.width - box.width - minMargin;
+    } else {
+      horizPos = origin.x - box.width - minMargin;
+    }
+  }
+
+  if (origin.y + box.height + minMargin < bounding.height) {
+    //can set in bottom
+    verticalPos = origin.y + minMargin;
+  } else {
+    if (origin.y - box.height - minMargin < 0) {
+      console.log('tooltip is too high to set in chart');
+      verticalPos = bounding.height - box.height - minMargin;
+    } else {
+      verticalPos = origin.y - box.height - minMargin;
+    } // set in top
+
+  }
+
+  return {
+    left: horizPos,
+    top: verticalPos
+  };
 }
 
 var DataProvider =
@@ -2077,7 +2183,7 @@ function () {
       var horizLines = hGridLines.map(function (val) {
         return {
           actual: val,
-          display: ~~Utils.Coord.linearActual2Display(val, _this._coord.y) + 0.5
+          display: ~~Utils.Coord.linearActual2Display(val, _this._coord.y)
         };
       });
       this._coord.horizLines = horizLines;
@@ -2107,7 +2213,7 @@ function () {
         // vertical grid line drawing for candlestick chart
         for (var l = this._filteredData.data.length - 1; l >= 0; l -= Math.round(style.grid.span.x / viewport.barWidth)) {
           if (this._filteredData.data[l].x > viewport.left && this._filteredData.data[l].x <= viewport.right) verticalLines.push({
-            display: ~~this._filteredData.data[l].x + 0.5,
+            display: ~~this._filteredData.data[l].x,
             actual: this._filteredData.data[l][timeIndex]
           });
         }
@@ -2355,10 +2461,9 @@ var schema = (_title$title$type$req = {
     title: 'price precision for chart label',
     type: 'number'
   },
-  // valueFormatter: {
-  //   description: 'if valuePrecision is not good enough for need, you can use valueFormatter provide a function to gennerate the priceText from value',
-  //   type: 'function',
-  // },
+  valueFormatter: {
+    description: 'if valuePrecision is not good enough for need, you can use valueFormatter provide a function to gennerate the priceText from value'
+  },
   dateFormat: {
     title: 'dateFormatter to format date, can be datePattern(like "YYYY-MM-DD HH:mm:ss") or a function',
     type: 'string'
@@ -2437,8 +2542,17 @@ var schema = (_title$title$type$req = {
     type: 'object',
     properties: {
       snapToData: {
-        title: 'whether crosshair snap to the value or align with mouse position',
+        title: 'whether crosshair snap to the value or align with mouse position, when set to ture, crosshair will snap to the mainSeries(set in seriesInfo.mainSeriesIndex, fallback to 0)',
         type: 'boolean'
+      },
+      // toolTip: {
+      //   title: 'callback function to create toolTip ',
+      //   type: 'any'
+      // },
+      snapProperty: {
+        title: 'when snapToData is ture, specify a property which crosshair will snapto, if this prop is not defined, will try data[valIndex], if valIndex is not defined, will use data[closeIndex]',
+        // type: 'string',
+        "enum": ['valIndex', 'openIndex', 'closeIndex', 'highIndex', 'lowIndex']
       },
       color: {
         title: 'crosshair line color',
@@ -2638,6 +2752,25 @@ var schema = (_title$title$type$req = {
         title: 'base value line color, base-value line will show when a series  been set baseValue',
         type: 'string'
       },
+      baseValueLine: {
+        title: 'base value line config',
+        type: 'object',
+        properties: {
+          dash: {
+            title: 'line dash',
+            description: 'refer to mdn: CanvasRenderingContext2D.setLineDash',
+            type: 'array'
+          },
+          lineWidth: {
+            title: 'line width',
+            type: 'number'
+          },
+          color: {
+            title: 'line color',
+            type: 'string'
+          }
+        }
+      },
       candlestick: {
         title: 'color style for candlestick chart',
         type: 'object',
@@ -2722,11 +2855,8 @@ var schema = (_title$title$type$req = {
             },
             seriesType: {
               title: 'chart type, can be "line | mountain | candlestick | OHLC"',
-              type: 'string'
-            },
-            snapToProp: {
-              title: 'when crosshair move, specify a property which crosshair will snapto, if this prop is not defined, will try data[valIndex], if valIndex is not defined, will use data[c]',
-              type: 'string'
+              type: 'string',
+              "enum": ['line', 'mountain', 'candlestick', 'OHLC']
             },
             o: {
               type: 'number'
@@ -2771,6 +2901,7 @@ function () {
         canvasEl = _this$genCanvasLayer.canvasEl,
         iaCanvasEl = _this$genCanvasLayer.iaCanvasEl;
 
+    this.genToolTipLayer(container);
     this.originWidth = canvasEl.width;
     this.originHeight = canvasEl.height;
     this.ctx = this[genContext](canvasEl);
@@ -2872,14 +3003,43 @@ function () {
       }
     }
   }, {
+    key: "genToolTipLayer",
+    value: function genToolTipLayer(container) {
+      container.style.position = 'relative';
+      var toolTipLayer = document.createElement('div');
+      toolTipLayer.style.position = 'absolute';
+      toolTipLayer.style.left = 0;
+      toolTipLayer.style.right = 0;
+      toolTipLayer.style.top = 0;
+      toolTipLayer.style.bottom = 0;
+      toolTipLayer.style.background = 'transparent';
+      container.appendChild(toolTipLayer);
+      this.toolTipLayer = toolTipLayer;
+    }
+  }, {
+    key: "reInit",
+    value: function reInit(container) {
+      var _this$genCanvasLayer2 = this[genCanvasLayer](container),
+          canvasEl = _this$genCanvasLayer2.canvasEl,
+          iaCanvasEl = _this$genCanvasLayer2.iaCanvasEl;
+
+      this.genToolTipLayer(container);
+      this.originWidth = canvasEl.width;
+      this.originHeight = canvasEl.height;
+      this.ctx = this[genContext](canvasEl);
+      this.iaCtx = this[genContext](iaCanvasEl);
+      this.confirmType();
+      this.genStyle();
+      this.dataProvider && this.dataProvider.produce();
+      this.rerender();
+    }
+  }, {
     key: "confirmType",
     value: function confirmType() {
-      this.type = this.style.type;
-
-      if (this.seriesInfo.timeRanges && this.seriesInfo.timeRanges.length > 1 && this.style.type === 'scalable') {
-        this.type = 'unscalable';
-        throw 'multi timeRanges chart cannot be scalable';
-      }
+      this.type = this.style.type; // if((this.seriesInfo.timeRanges && this.seriesInfo.timeRanges.length > 1 ) && this.style.type === 'scalable') {
+      //   this.type = 'unscalable'
+      //   throw 'multi timeRanges chart cannot be scalable'
+      // }
     }
   }, {
     key: "clean",
