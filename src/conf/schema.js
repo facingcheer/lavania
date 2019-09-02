@@ -275,6 +275,14 @@ export default {
           title: 'background color for the grid',
           type: 'string',
         },
+        showHorizoneLines: {
+          title: 'whether show horizone lines',
+          type: 'boolean',
+        },
+        showVerticalLines: {
+          title: 'whether show vertical lines',
+          type: 'boolean',
+        },
         lineColor: {
           title: 'line color for the grid',
           type: 'object',
@@ -287,6 +295,10 @@ export default {
               title: 'color for lines parallel to the y-axis',
               type: 'string',
             }
+          },
+          unscalaTimeGap: {
+            title: 'use for unscalable chart, for vertical lines shows by timegap',
+            type: 'number',
           }
         },
         span: {

@@ -24,7 +24,7 @@ export default class Render {
     // debugger
     const hLines = coord.horizLines.slice(1,-1)
     // console.log(hLines)
-    if (coord.horizLines) {
+    if (coord.horizLines && style.grid.showHorizoneLines) {
       Draw.Stroke(ctx, ctx => {
         hLines.forEach((y, index) => {
           let ypos = index === hLines.length - 1 ? y.display : y.display - 1
@@ -36,11 +36,12 @@ export default class Render {
 
     const vLines = coord.verticalLines
     // draw vertical lines
-    if(coord.verticalLines){
+    if(coord.verticalLines && style.grid.showVerticalLines){
+      const lineCount = coord.verticalLines.length
       Draw.Stroke(ctx, ctx => {
         vLines.forEach((val, ind) => {
-          ctx.moveTo(val.display + 0.5, viewport.top)
-          ctx.lineTo(val.display + 0.5, viewport.bottom)
+          ctx.moveTo((val.display + (ind === (lineCount - 1) ? -1.5 : 0.5)), viewport.top)
+          ctx.lineTo((val.display + (ind === (lineCount - 1) ? -1.5 : 0.5)), viewport.bottom)
         })
       }, style.grid.lineColor.y)
     }

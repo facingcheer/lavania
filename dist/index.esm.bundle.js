@@ -2495,6 +2495,8 @@ var DEFAULTS = function DEFAULTS() {
     grid: {
       bg: '#fff',
       // 网格线的颜色
+      showHorizoneLines: true,
+      showVerticalLines: true,
       limit: {
         y: {
           max: 8,
@@ -2509,9 +2511,10 @@ var DEFAULTS = function DEFAULTS() {
       // 网格线的颜色
       span: {
         x: 120,
-        y: 30 //
-
-      }
+        y: 30
+      },
+      //
+      unscalaTimeGap: 10 * 60 * 60 * 1000
     },
     axis: {
       showBorder: false,
@@ -3450,7 +3453,7 @@ function () {
 
       var hLines = coord.horizLines.slice(1, -1); // console.log(hLines)
 
-      if (coord.horizLines) {
+      if (coord.horizLines && style.grid.showHorizoneLines) {
         Draw.Stroke(ctx, function (ctx) {
           hLines.forEach(function (y, index) {
             var ypos = index === hLines.length - 1 ? y.display : y.display - 1;
@@ -3462,11 +3465,12 @@ function () {
 
       var vLines = coord.verticalLines; // draw vertical lines
 
-      if (coord.verticalLines) {
+      if (coord.verticalLines && style.grid.showVerticalLines) {
+        var lineCount = coord.verticalLines.length;
         Draw.Stroke(ctx, function (ctx) {
           vLines.forEach(function (val, ind) {
-            ctx.moveTo(val.display + 0.5, viewport.top);
-            ctx.lineTo(val.display + 0.5, viewport.bottom);
+            ctx.moveTo(val.display + (ind === lineCount - 1 ? -1.5 : 0.5), viewport.top);
+            ctx.lineTo(val.display + (ind === lineCount - 1 ? -1.5 : 0.5), viewport.bottom);
           });
         }, style.grid.lineColor.y);
       }
@@ -4501,16 +4505,30 @@ function () {
 
       if (this._chartType === 'unscalable') {
         this._panes.forEach(function (pane) {
+          // each pane starting line
           verticalLines.push({
-            display: pane.paneCoord.x.display[0] + 0.5,
+            display: pane.paneCoord.x.display[0],
             actual: pane.paneCoord.x.actual[0]
           });
+
+          if (style.grid.unscalaTimeGap) {
+            var extraLineX = pane.paneCoord.x.actual[0] + style.grid.unscalaTimeGap;
+
+            while (extraLineX < pane.paneCoord.x.actual[1]) {
+              verticalLines.push({
+                actual: extraLineX,
+                display: ~~Utils.Coord.linearActual2Display(extraLineX, pane.paneCoord.x)
+              });
+              extraLineX += style.grid.unscalaTimeGap;
+            }
+          }
         });
 
         verticalLines.push({
-          display: this._panes[this._panes.length - 1].paneCoord.x.display[1] + 0.5,
+          display: this._panes[this._panes.length - 1].paneCoord.x.display[1],
           actual: this._panes[this._panes.length - 1].paneCoord.x.actual[1]
         });
+        console.log(this._panes);
       } else {
         // vertical grid line drawing for candlestick chart
         for (var l = this._filteredData.data.length - 1; l >= 0; l -= Math.round(style.grid.span.x / viewport.barWidth)) {
@@ -7597,6 +7615,14 @@ var schema = (_title$title$type$req = {
         title: 'background color for the grid',
         type: 'string'
       },
+      showHorizoneLines: {
+        title: 'whether show horizone lines',
+        type: 'boolean'
+      },
+      showVerticalLines: {
+        title: 'whether show vertical lines',
+        type: 'boolean'
+      },
       lineColor: {
         title: 'line color for the grid',
         type: 'object',
@@ -7609,6 +7635,10 @@ var schema = (_title$title$type$req = {
             title: 'color for lines parallel to the y-axis',
             type: 'string'
           }
+        },
+        unscalaTimeGap: {
+          title: 'use for unscalable chart, for vertical lines shows by timegap',
+          type: 'number'
         }
       },
       span: {
@@ -7882,8 +7912,9 @@ function () {
       }
 
       this.confirmType();
-      this.genStyle();
-      this.dataProvider && this.dataProvider.produce();
+      this.genStyle(); // this.dataProvider && this.dataProvider.produce()
+
+      this.dataProvider = new DataProvider(this.dataSource, this.type, this);
       this.rerender();
     }
   }, {
@@ -7976,8 +8007,9 @@ function () {
       this.ctx = this[genContext](canvasEl);
       this.iaCtx = this[genContext](iaCanvasEl);
       this.confirmType();
-      this.genStyle();
-      this.dataProvider && this.dataProvider.produce();
+      this.genStyle(); // this.dataProvider && this.dataProvider.produce()
+
+      this.dataProvider = new DataProvider(this.dataSource, this.type, this);
       this.rerender();
     }
   }, {

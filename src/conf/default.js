@@ -52,6 +52,8 @@ const DEFAULTS = function(){
     },
     grid: {
       bg: '#fff',    // 网格线的颜色
+      showHorizoneLines: true,
+      showVerticalLines: true,
       limit: {
         y: {
           max: 8,
@@ -59,7 +61,8 @@ const DEFAULTS = function(){
         }
       },    // 网格线间隔调整限制
       lineColor: {x: '#f0f0f0', y: '#f0f0f0'},    // 网格线的颜色
-      span: {x: 120, y: 30} //
+      span: {x: 120, y: 30}, //
+      unscalaTimeGap: 10 * 60 * 60 * 1000
     },
     axis: {
       showBorder: false, // 显示图表border

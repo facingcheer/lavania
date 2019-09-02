@@ -144,15 +144,28 @@ export default class DataProvider {
     const verticalLines = []
     if (this._chartType === 'unscalable') {
       this._panes.forEach(pane => {
+        // each pane starting line
         verticalLines.push({
-          display: pane.paneCoord.x.display[0] + 0.5,
+          display: pane.paneCoord.x.display[0],
           actual: pane.paneCoord.x.actual[0]
         })
+        if(style.grid.unscalaTimeGap){
+
+          let extraLineX = pane.paneCoord.x.actual[0] + style.grid.unscalaTimeGap
+          while (extraLineX < pane.paneCoord.x.actual[1]) {
+            verticalLines.push({
+              actual: extraLineX,
+              display: ~~Utils.Coord.linearActual2Display(extraLineX, pane.paneCoord.x)
+            })
+            extraLineX += style.grid.unscalaTimeGap
+          }
+        }
       })
       verticalLines.push({
-        display: this._panes[this._panes.length - 1].paneCoord.x.display[1] + 0.5,
+        display: this._panes[this._panes.length - 1].paneCoord.x.display[1],
         actual:  this._panes[this._panes.length - 1].paneCoord.x.actual[1]
       })
+      console.log( this._panes)
     } else {
       // vertical grid line drawing for candlestick chart
       for (var l = this._filteredData.data.length - 1; l >= 0; l -= Math.round(style.grid.span.x / viewport.barWidth)) {

@@ -66,7 +66,8 @@ class Chart {
 
     this.confirmType()
     this.genStyle()
-    this.dataProvider && this.dataProvider.produce()
+    // this.dataProvider && this.dataProvider.produce()
+    this.dataProvider = new DataProvider(this.dataSource, this.type, this)
     this.rerender()
   }
 
@@ -161,7 +162,8 @@ class Chart {
     this.iaCtx = this[genContext](iaCanvasEl)
     this.confirmType()
     this.genStyle()
-    this.dataProvider && this.dataProvider.produce()
+    // this.dataProvider && this.dataProvider.produce()
+    this.dataProvider = new DataProvider(this.dataSource, this.type, this)
     this.rerender()
   }
 
