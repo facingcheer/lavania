@@ -11,7 +11,7 @@ export default function(ctx, data, coord, seriesConf, decorators) {
   })
 
   Draw.Stroke(ctx, ctx => {
-    ctx.lineWidth = seriesConf.lineWidth || 1
+    ctx.lineWidth = seriesConf.style.lineWidth || 1
     points.forEach((point, index) => {
         if (!index)
           ctx.moveTo(point.x, point.y)

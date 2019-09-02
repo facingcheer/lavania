@@ -222,6 +222,14 @@
 						showHorizoneLines: false,
 						showVerticalLines: false,
 						unscalaTimeGap: 0
+					},
+					seriesStyle: {
+						mountain: {
+							lineWidth: 1, // 价格线的粗细
+							lineColor: '#ff4419', // 价格线的颜色
+							gradientUp: '#ff4419', // 山形内部渐变色
+							gradientDown: 'rgba(255, 104, 4, 0)'
+						}
 					}
 				}
 				chart = new Chart(document.getElementById('chart'), data, pattern)

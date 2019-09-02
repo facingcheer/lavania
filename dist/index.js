@@ -885,7 +885,7 @@ function linePainter (ctx, data, coord, seriesConf, decorators) {
     });
   });
   Draw.Stroke(ctx, function (ctx) {
-    ctx.lineWidth = seriesConf.lineWidth || 1;
+    ctx.lineWidth = seriesConf.style.lineWidth || 1;
     points.forEach(function (point, index) {
       if (!index) ctx.moveTo(point.x, point.y);
       ctx.lineTo(point.x, point.y);
@@ -1082,6 +1082,7 @@ function mountainPainter (ctx, data, coord, seriesConf) {
       ctx.closePath();
     }, gradient);
   });
+  console.log(seriesConf);
   return linePainter(ctx, data, coord, seriesConf, decorators);
 }
 
