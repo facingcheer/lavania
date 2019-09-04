@@ -19,6 +19,5 @@ export default function(ctx, data, coord, seriesConf) {
         ctx.closePath()
       }, gradient)
   })
-  console.log(seriesConf)
   return linePainter(ctx, data, coord, seriesConf, decorators)
 }

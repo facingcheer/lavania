@@ -1076,7 +1076,6 @@ function mountainPainter (ctx, data, coord, seriesConf) {
       ctx.closePath();
     }, gradient);
   });
-  console.log(seriesConf);
   return linePainter(ctx, data, coord, seriesConf, decorators);
 }
 
@@ -1868,7 +1867,6 @@ var events = {
   },
   pinchStart: function pinchStart(chart, e, linked) {
     if (linked) return;
-    console.log(e, linked);
     chart.eventInfo.pinchStart.offset = chart.viewport.offset;
     chart.eventInfo.pinchStart.barWidth = chart.viewport.barWidth;
     chart.eventInfo.pinchStart.center = e.center;
@@ -1888,7 +1886,6 @@ var events = {
       return;
     }
 
-    console.log(linked, chart.eventInfo.selectedIndex, e.scale);
     var zoomScale = e.scale - 1;
     var offsetIndex = chart.dataSource.length - chart.eventInfo.selectedIndex - 1;
     var oldBarWidth = chart.eventInfo.pinchStart.barWidth; // const scaleDivision = 100 / chart.style.wheelZoomSpeed
@@ -1908,11 +1905,8 @@ var events = {
   },
   pinchEnd: function pinchEnd(chart, e, linked) {
     if (linked) return;
-    console.log(e, linked);
   },
-  pinchEvent: function pinchEvent(pinchPoint, scale) {
-    console.log(pinchPoint, scale);
-  },
+  pinchEvent: function pinchEvent(pinchPoint, scale) {},
   clean: function clean(chart, e, linked) {
     if (chart.toolTipLayer) {
       chart.toolTipLayer.innerHTML = '';
@@ -1920,9 +1914,7 @@ var events = {
 
     chart.iaCtx.clearRect(0, 0, chart.originWidth, chart.originHeight);
   },
-  pinch: function pinch(chart, e, linked) {
-    console.log(e);
-  },
+  pinch: function pinch(chart, e, linked) {},
   mouseWheel: function mouseWheel(chart, e, linked) {
     if (linked) return;
     var zoomScale = Math.sign(e.deltaY) * Math.min(1, Math.abs(e.deltaY));
@@ -1971,8 +1963,6 @@ var getNearest = {
         }
       }
     }
-
-    console.log(event.localX, filteredData, chart.viewport.barWidth);
   },
   unscalable: function unscalable(chart, xpos) {
     var rangeIndex = 0; // multiRange charts has diffrent scales in diffrent ratio parts
@@ -2123,7 +2113,6 @@ function () {
 
       if (!style.seriesInfo.xByIndex) {
         paneData.forEach(function (pane, index) {
-          debugger;
           pane.forEach(function (item) {
             item.x = ~~Utils.Coord.linearActual2Display(item[timeIndex], paneCoords[index].x);
           });
@@ -2251,7 +2240,6 @@ function () {
           display: this._panes[this._panes.length - 1].paneCoord.x.display[1],
           actual: this._panes[this._panes.length - 1].paneCoord.x.actual[1]
         });
-        console.log(this._panes);
       } else {
         // vertical grid line drawing for candlestick chart
         for (var l = this._filteredData.data.length - 1; l >= 0; l -= Math.round(style.grid.span.x / viewport.barWidth)) {

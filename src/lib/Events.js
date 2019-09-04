@@ -279,7 +279,6 @@ const events = {
 
   pinchStart(chart, e, linked) {
     if (linked) return
-    console.log(e, linked)
     chart.eventInfo.pinchStart.offset = chart.viewport.offset
     chart.eventInfo.pinchStart.barWidth = chart.viewport.barWidth
     chart.eventInfo.pinchStart.center = e.center
@@ -293,7 +292,6 @@ const events = {
     if (!chart.eventInfo.selectedItem|| !chart.eventInfo.selectedIndex) {
       return
     }
-    console.log(linked, chart.eventInfo.selectedIndex, e.scale)
     let zoomScale = e.scale - 1
 
 
@@ -314,11 +312,9 @@ const events = {
 
   pinchEnd(chart, e, linked) {
     if (linked) return
-    console.log(e, linked)
   },
 
   pinchEvent(pinchPoint, scale) {
-    console.log(pinchPoint, scale)
   },
 
   clean(chart, e, linked) {
@@ -329,7 +325,6 @@ const events = {
   },
 
   pinch(chart, e, linked) {
-    console.log(e)
   },
 
   mouseWheel(chart, e, linked) {
@@ -374,7 +369,6 @@ const getNearest = {
         }
       }
     }
-    console.log(event.localX, filteredData, chart.viewport.barWidth)
   },
 
   unscalable(chart, xpos) {

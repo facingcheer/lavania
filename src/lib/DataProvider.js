@@ -67,7 +67,6 @@ export default class DataProvider {
 
     if(!style.seriesInfo.xByIndex) {
       paneData.forEach((pane, index) => {
-        debugger
         pane.forEach(item => {
           item.x = ~~Utils.Coord.linearActual2Display(item[timeIndex], paneCoords[index].x)
         })
@@ -177,7 +176,6 @@ export default class DataProvider {
         display: this._panes[this._panes.length - 1].paneCoord.x.display[1],
         actual:  this._panes[this._panes.length - 1].paneCoord.x.actual[1]
       })
-      console.log( this._panes)
     } else {
       // vertical grid line drawing for candlestick chart
       for (var l = this._filteredData.data.length - 1; l >= 0; l -= Math.round(style.grid.span.x / viewport.barWidth)) {
