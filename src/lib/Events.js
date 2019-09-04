@@ -431,6 +431,7 @@ function calcBoxPositionInBounding(origin, box, bounding, minMargin = 20) {
     verticalPos = origin.y + minMargin
   } else {
     if(origin.y - box.height - minMargin < 0) {
+      console.warn('tooltip is too high to set in chart')
       console.log('tooltip is too high to set in chart')
       verticalPos = bounding.height - box.height - minMargin
     } else {

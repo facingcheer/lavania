@@ -1,5 +1,6 @@
 {
   "presets": [
     ["@babel/env", {"modules": false}]
-  ]
+  ],
+  "plugins": ["transform-remove-debugger", ["transform-remove-console", { "exclude": [ "error", "warn"] }]]
 }

@@ -21,7 +21,7 @@ export default class Render {
     const { coord } = dataProvider
 
     // draw horizontal lines
-    // debugger
+    debugger
     const hLines = coord.horizLines.slice(1,-1)
     // console.log(hLines)
     if (coord.horizLines && style.grid.showHorizoneLines) {

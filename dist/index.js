@@ -1154,7 +1154,6 @@ function () {
           dataProvider = _this$_chart.dataProvider,
           viewport = _this$_chart.viewport;
       var coord = dataProvider.coord; // draw horizontal lines
-      // debugger
 
       var hLines = coord.horizLines.slice(1, -1); // console.log(hLines)
 
@@ -2036,7 +2035,7 @@ function calcBoxPositionInBounding(origin, box, bounding) {
     verticalPos = origin.y + minMargin;
   } else {
     if (origin.y - box.height - minMargin < 0) {
-      console.log('tooltip is too high to set in chart');
+      console.warn('tooltip is too high to set in chart');
       verticalPos = bounding.height - box.height - minMargin;
     } else {
       verticalPos = origin.y - box.height - minMargin;
