@@ -6,7 +6,8 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "cross-env NODE_ENV=production rollup -c rollup.config.esm.js && rollup -c rollup.config.cjs.js && rollup -c rollup.config.esm.bundle.js",
-    "dev": "rollup -c rollup.config.esm.bundle.js -w"
+    "dev": "rollup -c rollup.config.esm.bundle.js -w",
+    "builddocs": "cross-env NODE_ENV=production rollup -c rollup.config.docs.esm.js"
   },
   "author": "facingcheer",
   "license": "ISC",
