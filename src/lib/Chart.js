@@ -16,179 +16,177 @@ const genCanvasLayer = Symbol()
 const painter = Symbol()
 
 class Chart {
-  constructor(container, dataSource, options) {
-    // prevent same data for different charts
-    this.dataSource = JSON.parse(JSON.stringify(dataSource))
-    // Utils.Safe.dataCheck(dataSource)
-    //  = dataSource
+	constructor(container, dataSource, options) {
+		// prevent same data for different charts
+		this.dataSource = JSON.parse(JSON.stringify(dataSource))
+		const { canvasEl, iaCanvasEl } = this[genCanvasLayer](container)
 
+		this.genToolTipLayer(container)
 
-    const { canvasEl, iaCanvasEl} = this[genCanvasLayer](container)
+		this.originWidth = canvasEl.width
+		this.originHeight = canvasEl.height
 
-    this.genToolTipLayer(container)
+		this.ctx = this[genContext](canvasEl)
+		this.iaCtx = this[genContext](iaCanvasEl)
 
-    this.originWidth = canvasEl.width
-    this.originHeight = canvasEl.height
+		this.linkedCharts = new Set()
 
-    this.ctx = this[genContext](canvasEl)
-    this.iaCtx = this[genContext](iaCanvasEl)
+		const defaults = DEFAULTS()
+		this.style = merge(defaults, options)
+		this.schema = schema
+		this.seriesInfo = options.seriesInfo
 
-    this.linkedCharts = new Set
+		this.confirmType()
 
-    const defaults = DEFAULTS()
-    this.style = merge(defaults, options)
-    this.schema = schema
-    this.seriesInfo = options.seriesInfo
+		this.genStyle()
 
-    this.confirmType()
+		this.dataProvider = new DataProvider(this.dataSource, this.type, this)
+		this.render = new Render(this)
 
-    this.genStyle()
+		if (!this.rerender) {
+			this.rerender = throttle(this[painter], 16)
+		}
 
-    this.dataProvider = new DataProvider(this.dataSource, this.type, this)
-    this.render = new Render(this)
+		this.rerender()
 
-    if(!this.rerender) {
-      this.rerender = throttle(this[painter], 16)
-    }
+		if (!this.style.noEvents) {
+			this.events = genEvent(this, this.type)
+			this.EventHandler = new EventHandler(container, this.events)
+		}
+		// this.events = genEvent(this, this.type)
+		// this.EventHandler = new EventHandler(container, this.events)
+	}
 
-    this.rerender()
+	updateOption(newOpt) {
+		this.style = merge(this.style, newOpt)
 
-    if(!this.style.noEvents) {
-      this.events = genEvent(this, this.type)
-      this.EventHandler = new EventHandler(container, this.events)
-    }
-    // this.events = genEvent(this, this.type)
-    // this.EventHandler = new EventHandler(container, this.events)
-  }
+		if (newOpt.seriesInfo) {
+			this.seriesInfo = merge(this.seriesInfo, newOpt.seriesInfo)
+		}
 
-  updateOption(newOpt) {
-    this.style = merge(this.style, newOpt)
+		this.confirmType()
+		this.genStyle()
+		// this.dataProvider && this.dataProvider.produce()
+		this.dataProvider = new DataProvider(this.dataSource, this.type, this)
+		this.rerender()
+	}
 
-    if(newOpt.seriesInfo) {
-      this.seriesInfo = merge(this.seriesInfo, newOpt.seriesInfo)
-    }
+	[genCanvasLayer](container) {
+		const canvasMain = document.createElement('canvas')
+		const canvasIa = document.createElement('canvas')
 
-    this.confirmType()
-    this.genStyle()
-    // this.dataProvider && this.dataProvider.produce()
-    this.dataProvider = new DataProvider(this.dataSource, this.type, this)
-    this.rerender()
-  }
+		canvasMain.width = canvasIa.width = container.clientWidth
+		canvasMain.height = canvasIa.height = container.clientHeight
 
-  [genCanvasLayer](container) {
-    const canvasMain = document.createElement('canvas')
-    const canvasIa = document.createElement('canvas')
+		canvasMain.style.position = canvasIa.style.position = 'absolute'
+		canvasMain.style.top = canvasIa.style.top = 0
+		canvasMain.style.left = canvasIa.style.left = 0
 
-    canvasMain.width = canvasIa.width = container.clientWidth
-    canvasMain.height = canvasIa.height = container.clientHeight
+		if (!container.style.position || container.style.position === 'static') container.style.viewport = 'relative'
 
-    canvasMain.style.position = canvasIa.style.position = 'absolute'
-    canvasMain.style.top = canvasIa.style.top = 0
-    canvasMain.style.left = canvasIa.style.left = 0
+		container.innerHTML = ''
+		container.appendChild(canvasMain)
+		container.appendChild(canvasIa)
+		return {
+			canvasEl: canvasMain,
+			iaCanvasEl: canvasIa
+		}
+	}
 
-    if (!container.style.position || container.style.position === 'static')
-    container.style.viewport = 'relative'
+	[genContext](canvasEl) {
+		const dpr = window ? window.devicePixelRatio : 1
+		const ctx = canvasEl.getContext('2d')
+		canvasEl.style.width = (canvasEl.clientWidth || canvasEl.width) + 'px'
+		canvasEl.style.height = (canvasEl.clientHeight || canvasEl.height) + 'px'
+		canvasEl.width *= dpr
+		canvasEl.height *= dpr
+		ctx.scale(dpr, dpr)
+		return ctx
+	}
 
-    container.innerHTML = ''
-    container.appendChild(canvasMain)
-    container.appendChild(canvasIa)
-    return {
-      canvasEl: canvasMain,
-      iaCanvasEl: canvasIa
-    }
-  }
+	genStyle() {
+		this.ctx.font = this.style.font.size + 'px ' + this.style.font.family
+		this.iaCtx.font = this.ctx.font
 
-  [genContext](canvasEl) {
-    const dpr = window ? window.devicePixelRatio : 1
-    const ctx = canvasEl.getContext('2d')
-    canvasEl.style.width = (canvasEl.clientWidth || canvasEl.width) + 'px'
-    canvasEl.style.height = (canvasEl.clientHeight ||canvasEl.height) + 'px'
-    canvasEl.width *= dpr
-    canvasEl.height *= dpr
-    ctx.scale(dpr, dpr)
-    return ctx
-  }
+		this.viewport = Object.assign({}, this.style.viewport, {
+			left: this.style.padding.left,
+			top: this.style.padding.top,
+			right: this.originWidth - this.style.padding.right,
+			bottom: this.originHeight - this.style.padding.bottom
+		})
+	}
 
-  genStyle(){
-    this.ctx.font = this.style.font.size + 'px ' + this.style.font.family
-    this.iaCtx.font = this.ctx.font
+	[painter](linked, force) {
+		this.dataProvider && this.dataProvider.produce()
+		this.clean()
 
-    this.viewport = Object.assign({}, this.style.viewport, {
-      left: this.style.padding.left,
-      top: this.style.padding.top,
-      right: this.originWidth - this.style.padding.right,
-      bottom: this.originHeight - this.style.padding.bottom
-    })
-  }
+		Utils.Draw.Fill(
+			this.ctx,
+			(ctx) => {
+				ctx.rect(0, 0, this.originWidth, this.originHeight)
+			},
+			this.style.grid.bg
+		)
 
-  [painter](linked, force) {
-    this.dataProvider && this.dataProvider.produce()
-    this.clean()
+		this.render.rend()
 
-    Utils.Draw.Fill(this.ctx, (ctx) => {
-      ctx.rect(0, 0, this.originWidth, this.originHeight)
-    }, this.style.grid.bg)
+		// rerender all linked charts
+		if (this.linkedCharts.size && !linked) {
+			[ ...this.linkedCharts ].forEach((chart) => {
+				chart.viewport.offset = this.viewport.offset
+				chart.viewport.barWidth = this.viewport.barWidth
+				chart.rerender(true)
+			})
+		}
+	}
 
-    this.render.rend()
+	genToolTipLayer(container) {
+		container.style.position = 'relative'
+		const toolTipLayer = document.createElement('div')
+		toolTipLayer.style.position = 'absolute'
+		toolTipLayer.style.left = 0
+		toolTipLayer.style.right = 0
+		toolTipLayer.style.top = 0
+		toolTipLayer.style.bottom = 0
+		toolTipLayer.style.background = 'transparent'
+		container.appendChild(toolTipLayer)
+		this.toolTipLayer = toolTipLayer
+	}
 
-    // rerender all linked charts
-    if (this.linkedCharts.size && !linked){
-      [...this.linkedCharts].forEach(chart => {
-        chart.viewport.offset = this.viewport.offset
-        chart.viewport.barWidth = this.viewport.barWidth
-        chart.rerender(true)
-      })
-    }
-  }
+	reInit(container) {
+		const { canvasEl, iaCanvasEl } = this[genCanvasLayer](container)
 
-  genToolTipLayer(container) {
-    container.style.position = 'relative'
-    const toolTipLayer = document.createElement('div')
-    toolTipLayer.style.position = 'absolute'
-    toolTipLayer.style.left = 0
-    toolTipLayer.style.right = 0
-    toolTipLayer.style.top = 0
-    toolTipLayer.style.bottom = 0
-    toolTipLayer.style.background = 'transparent'
-    container.appendChild(toolTipLayer)
-    this.toolTipLayer = toolTipLayer
-  }
+		this.genToolTipLayer(container)
 
-  reInit(container) {
-    const { canvasEl, iaCanvasEl} = this[genCanvasLayer](container)
+		this.originWidth = canvasEl.width
+		this.originHeight = canvasEl.height
 
-    this.genToolTipLayer(container)
+		this.ctx = this[genContext](canvasEl)
+		this.iaCtx = this[genContext](iaCanvasEl)
+		this.confirmType()
+		this.genStyle()
+		// this.dataProvider && this.dataProvider.produce()
+		this.dataProvider = new DataProvider(this.dataSource, this.type, this)
+		this.rerender()
+	}
 
-    this.originWidth = canvasEl.width
-    this.originHeight = canvasEl.height
+	confirmType() {
+		this.type = this.style.type
+		// if((this.seriesInfo.timeRanges && this.seriesInfo.timeRanges.length > 1 ) && this.style.type === 'scalable') {
+		//   this.type = 'unscalable'
+		//   throw 'multi timeRanges chart cannot be scalable'
+		// }
+	}
 
-    this.ctx = this[genContext](canvasEl)
-    this.iaCtx = this[genContext](iaCanvasEl)
-    this.confirmType()
-    this.genStyle()
-    // this.dataProvider && this.dataProvider.produce()
-    this.dataProvider = new DataProvider(this.dataSource, this.type, this)
-    this.rerender()
-  }
+	clean(e, name, force) {
+		this.iaCtx.clearRect(0, 0, this.originWidth, this.originHeight)
 
-  confirmType() {
-    this.type = this.style.type
-    // if((this.seriesInfo.timeRanges && this.seriesInfo.timeRanges.length > 1 ) && this.style.type === 'scalable') {
-    //   this.type = 'unscalable'
-    //   throw 'multi timeRanges chart cannot be scalable'
-    // }
-  }
-
-  clean(e, name, force){
-    this.iaCtx.clearRect(0, 0, this.originWidth, this.originHeight)
-
-    // rerender all linked charts
-    if (this.linkedCharts.size && !force){
-      this.linkedCharts.forEach(chart => {
-         chart.events.mouseLeaveEvent.call(chart, null, true)
-      })
-    }
-  }
-
+		// rerender all linked charts
+		if (this.linkedCharts.size && !force) {
+			this.linkedCharts.forEach((chart) => {
+				chart.events.mouseLeaveEvent.call(chart, null, true)
+			})
+		}
+	}
 }
 export default Chart

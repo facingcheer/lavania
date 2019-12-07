@@ -69,6 +69,10 @@ function _iterableToArray(iter) {
 }
 
 function _iterableToArrayLimit(arr, i) {
+  if (!(Symbol.iterator in Object(arr) || Object.prototype.toString.call(arr) === "[object Arguments]")) {
+    return;
+  }
+
   var _arr = [];
   var _n = true;
   var _d = false;
@@ -298,9 +302,9 @@ var DEFAULTS = function DEFAULTS() {
         // 蜡烛边框颜色
         wick: {
           up: '#FF4040',
-          down: '#1EB955' // 蜡烛烛心颜色
+          down: '#1EB955'
+        } // 蜡烛烛心颜色
 
-        }
       },
       OHLC: {
         // 美国线的颜色
@@ -1251,9 +1255,9 @@ function () {
 
       var rates = {
         up: [],
-        down: [] // y-axis label
-
-      };
+        down: []
+      } // y-axis label
+      ;
       ['left', 'right'].forEach(function (direction) {
         if (style.axis.label[direction].show) {
           Draw.Text(ctx, function (ctx) {
@@ -1502,9 +1506,9 @@ var originPosMap = {
   righttop: [1, 0],
   leftbottom: [0, 1],
   rightbottom: [1, 1],
-  center: [0.5, 0.5] // originPos: provide origin in the position of the label
+  center: [0.5, 0.5]
+}; // originPos: provide origin in the position of the label
 
-};
 function textLabelPainter(_ref) {
   var ctx = _ref.ctx,
       text = _ref.text,
@@ -1729,7 +1733,7 @@ var events = {
       if (chart.style.crosshair.snapProperty && mainSeries[chart.style.crosshair.snapProperty]) {
         snapPointIndex = mainSeries[chart.style.crosshair.snapProperty];
       } else {
-        snapPointIndex = mainSeries['valIndex'];
+        snapPointIndex = mainSeries['valIndex' ];
       } // if(!snapPointIndex) return
 
 
@@ -1773,7 +1777,7 @@ var events = {
     if (chart.style.crosshair.snapProperty && mainSeries[chart.style.crosshair.snapProperty]) {
       snapPointIndex = mainSeries[chart.style.crosshair.snapProperty];
     } else {
-      snapPointIndex = mainSeries['valIndex'];
+      snapPointIndex = mainSeries['valIndex' ];
     }
 
     if (!snapPointIndex) return;
@@ -1811,7 +1815,7 @@ var events = {
     if (chart.style.crosshair.snapProperty && mainSeries[chart.style.crosshair.snapProperty]) {
       snapPointIndex = mainSeries[chart.style.crosshair.snapProperty];
     } else {
-      snapPointIndex = mainSeries['valIndex'];
+      snapPointIndex = mainSeries['valIndex' ];
     }
 
     if (!snapPointIndex) return;

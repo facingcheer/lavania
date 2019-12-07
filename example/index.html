@@ -14,14 +14,14 @@
 	<!-- <meta name="viewport" content="width=device-width, initial-scale=1">
      -->
 	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1">
-	<script src="./datasource.js"></script>
+	<script src="/example/datasource.js"></script>
 	<!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/ajv/6.10.2/ajv.bundle.js"></script> -->
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/split.js/1.5.11/split.min.js"></script>
 
 	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/hint.css/2.6.0/hint.base.min.css">
 
-	<link href="./jsoneditor.min.css" rel="stylesheet" type="text/css">
-	<script src="./jsoneditor.min.js"></script>
+	<link href="/example/jsoneditor.min.css" rel="stylesheet" type="text/css">
+	<script src="/example/jsoneditor.min.js"></script>
 </head>
 <style>
 	* {
@@ -39,13 +39,11 @@
 		vertical-align: top;
 		font-family: Arial, Helvetica, sans-serif;
 	}
-
 	.chart {
 		width: 100%;
 		height: 600px;
 		position: relative;
 	}
-
 	.minichart {
 		width: 800px;
 		height: 200px;
@@ -53,23 +51,19 @@
 		margin-bottom: 100px;
 		/* top: -28px; */
 	}
-
 	.main {
 		display: flex;
 		flex-direction: row;
 		justify-content: space-between;
 		height: 100vh;
 	}
-
 	.chart-main {
 		/* width: 75%; */
 	}
-
 	.configure {
 		/* width: 25%; */
 		height: 800px;
 	}
-
 	.chart-tooltip {
 		width: 150px;
 		background: #2DB0F9;
@@ -77,7 +71,6 @@
 		padding: 10px;
 		border-radius: 10px;
 	}
-
 	.chart-tooltip .tooltip-item {
 		width: 100%;
 		color: #fff;
@@ -86,48 +79,39 @@
 		font-size: 12px;
 		word-break: break-all;
 	}
-
 	.gutter {
 		background-color: #eee;
 		background-repeat: no-repeat;
 		background-position: 50%;
 	}
-
 	.gutter {
 		background-color: #eee;
 		background-repeat: no-repeat;
 		background-position: 50%;
 	}
-
 	.configure {
 		overflow: auto;
 	}
-
 	.gutter.gutter-vertical {
 		background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB4AAAAFAQMAAABo7865AAAABlBMVEVHcEzMzMzyAv2sAAAAAXRSTlMAQObYZgAAABBJREFUeF5jOAMEEAIEEFwAn3kMwcB6I2AAAAAASUVORK5CYII=');
 	}
-
 	.gutter.gutter-horizontal {
 		background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUAAAAeCAYAAADkftS9AAAAIklEQVQoU2M4c+bMfxAGAgYYmwGrIIiDjrELjpo5aiZeMwF+yNnOs5KSvgAAAABJRU5ErkJggg==');
 	}
-
 	@media screen and (max-width: 500px) {
 		.main {
 			display: flex;
 			flex-direction: column;
 			justify-content: space-between;
 		}
-
 		.cc {
 			width: 300px;
 		}
-
 		.chart {
 			width: 100%;
 			height: 300px;
 			position: relative;
 		}
-
 		.configure {
 			/* width: 25%; */
 			height: 50%;
@@ -139,7 +123,6 @@
 			margin-bottom: 100px;
 			/* top: -28px; */
 		}
-
 		.chart-tooltip {
 			width: 100px;
 			background: #2DB0F9;
@@ -147,7 +130,6 @@
 			padding: 10px;
 			border-radius: 10px;
 		}
-
 		.chart-tooltip .tooltip-item {
 			width: 100%;
 			color: #fff;
@@ -157,7 +139,6 @@
 			word-break: break-all;
 		}
 	}
-
 	/* .jsoneditor-tree .jsoneditor-value{
     border: 1px solid #333;
   } */
@@ -189,58 +170,61 @@
 						}
 					}
 				})
-
-				 const data = [[1563408000000,1],[1563494400000,1.0002],[1564099200000,1.0006],[1564704000000,1.0011],[1565308800000,1.0017],[1565913600000,1.0021],[1566518400000,1.0024],[1566777600000,1.0026],[1566864000000,1.0026],[1566950400000,1.0027],[1567036800000,1.0028],[1567123200000,1.0028]]
-				 pattern = {
-					type: 'unscalable',
-					noEvents: false,
-					padding: {
-						left: 0,
-						top:0,
-						right:0,
-						bottom:0,
+				pattern = {
+					type: 'scalable',
+					crosshair: {
+						snapProperty: 'closeIndex',
+						toolTip: function (params, callback) {
+							const selectedItem = params.selectedItem
+							const dom = `<div class="chart-tooltip">
+							<div class="tooltip-item">time: ${new Date(selectedItem[0])}</div>
+							<div class="tooltip-item">openPrice: ${selectedItem[1]}</div>
+							<div class="tooltip-item">closePrice: ${selectedItem[2]}</div>
+							<div class="tooltip-item">highPrice: ${selectedItem[3]}</div>
+							<div class="tooltip-item">lowPrice: ${selectedItem[4]}</div>
+							</div>`;
+							callback(dom)
+						}
 					},
-					label: {
-						right: {
-							show: false
-						},
-						bottom:{
-							show: false
+					seriesStyle: {    // 关于数据的样式
+						baseValueLine: {
+							dash: [5, 5],
+							lineWidth: 1,
+							color: '#2DB0F9'
 						}
 					},
 					seriesInfo: {
 						timeIndex: 0,
-						xByIndex: true,
-						timeRanges: [[data[0][0], data[data.length - 1][0]]],
+						mainSeriesIndex: 0,
+						timeRanges: [[1479931200 * 1000, 1479970800 * 1000],
+												[1482148800 * 1000, 1482552000 * 1000]],
+						timeRangesRatio: [0.2, 0.8],
+						baseValue: 1.04,
 						series: [{
+							name: 'K线',
+							seriesType: 'OHLC',
+							openIndex: 1,
+							closeIndex: 2,
+							highIndex: 3,
+							lowIndex: 4
+						}, {
 							name: '均线',
 							seriesType: 'mountain',
-							valIndex: 1
+							valIndex: 9
 						}]
 					},
-					grid:{
-						showHorizoneLines: false,
-						showVerticalLines: false,
-						unscalaTimeGap: 0
-					},
-					seriesStyle: {
-						mountain: {
-							lineWidth: 1, // 价格线的粗细
-							lineColor: '#ff4419', // 价格线的颜色
-							gradientUp: '#ff4419', // 山形内部渐变色
-							gradientDown: 'rgba(255, 104, 4, 0)'
-						}
+					viewport: {
+						barWidth: 10,
+						offset: 0
 					}
 				}
-				chart = new Chart(document.getElementById('chart'), data, pattern)
-
+				chart = new Chart(document.getElementById('chart'), window.fake_data, pattern)
 				chart.updateOption({
 					zoomSpeed: 2,
 					crosshair: {
 						dash: [5,5]
 					}
 				})
-
 				// setTimeout(() => {
 				//   chart.style.crosshair.dash = [5,5]
 				//   chart.style.crosshair.labelBg = '#efefef'
@@ -249,9 +233,6 @@
 				//   // chart.linkedCharts.add(chart11)
 				//   // chart.rerender()
 				// }, 0);
-
-				console.log(chart)
-
 			var container = document.getElementById("configure")
 			var options = {
 					// ajv: Ajv({ allErrors: true, verbose: true }),
@@ -267,7 +248,6 @@
 						switch (node.field) {
 							// case 'type':
 							// 	return false
-
 							default:
 								return {
 									field: false,
@@ -285,7 +265,6 @@
 				};
         let editor = new JSONEditor(container, options)
         editor.set(chart.style)
-
         function applyHint() {
           Array.prototype.forEach.call(document.querySelectorAll('.jsoneditor-field'), (el)=> {
             if(el.getAttribute('title')) {
@@ -300,7 +279,6 @@
             }
           })
         }
-
         document.addEventListener('click', e => {
           if(e.target.classList.contains('jsoneditor-button')){
             applyHint()
