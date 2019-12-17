@@ -14,7 +14,6 @@ import schema from '../conf/schema'
 const genContext = Symbol()
 const genCanvasLayer = Symbol()
 const painter = Symbol()
-
 class Chart {
 	constructor(container, dataSource, options) {
 		// prevent same data for different charts
@@ -98,8 +97,8 @@ class Chart {
 		const ctx = canvasEl.getContext('2d')
 		canvasEl.style.width = (canvasEl.clientWidth || canvasEl.width) + 'px'
 		canvasEl.style.height = (canvasEl.clientHeight || canvasEl.height) + 'px'
-		canvasEl.width *= dpr
-		canvasEl.height *= dpr
+		canvasEl.width = (canvasEl.clientWidth || canvasEl.width) * dpr
+		canvasEl.height =  (canvasEl.clientHeight || canvasEl.height) * dpr
 		ctx.scale(dpr, dpr)
 		return ctx
 	}
