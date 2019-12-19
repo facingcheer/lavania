@@ -1,6 +1,7 @@
 import babel from 'rollup-plugin-babel'
 import resolve from 'rollup-plugin-node-resolve'
 import commonjs from 'rollup-plugin-commonjs'
+import visualizer from 'rollup-plugin-visualizer'
 
 export default {
   input: 'src/index.js',
@@ -9,6 +10,7 @@ export default {
     file: 'dist/index.esm.js'
   },
   plugins: [
+    visualizer(),
     resolve(),
     commonjs(),
     babel({

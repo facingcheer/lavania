@@ -2954,8 +2954,7 @@ function () {
     _classCallCheck(this, Chart);
 
     // prevent same data for different charts
-    this.dataSource = JSON.parse(JSON.stringify(dataSource)); // Utils.Safe.dataCheck(dataSource)
-    //  = dataSource
+    this.dataSource = JSON.parse(JSON.stringify(dataSource));
 
     var _this$genCanvasLayer = this[genCanvasLayer](container),
         canvasEl = _this$genCanvasLayer.canvasEl,
@@ -3031,8 +3030,8 @@ function () {
       var ctx = canvasEl.getContext('2d');
       canvasEl.style.width = (canvasEl.clientWidth || canvasEl.width) + 'px';
       canvasEl.style.height = (canvasEl.clientHeight || canvasEl.height) + 'px';
-      canvasEl.width *= dpr;
-      canvasEl.height *= dpr;
+      canvasEl.width = (canvasEl.clientWidth || canvasEl.width) * dpr;
+      canvasEl.height = (canvasEl.clientHeight || canvasEl.height) * dpr;
       ctx.scale(dpr, dpr);
       return ctx;
     }

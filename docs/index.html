@@ -196,26 +196,26 @@
 					seriesInfo: {
 						timeIndex: 0,
 						mainSeriesIndex: 0,
-						timeRanges: [[1479931200 * 1000, 1479970800 * 1000],
-												[1482148800 * 1000, 1482552000 * 1000]],
-						timeRangesRatio: [0.2, 0.8],
-						baseValue: 1.04,
+						// timeRanges: [[1479931200 * 1000, 1479970800 * 1000],
+						// 						[1482148800 * 1000, 1482552000 * 1000]],
+						// timeRangesRatio: [0.2, 0.8],
+						// baseValue: 1.04,
 						series: [{
 							name: 'K线',
 							seriesType: 'candlestick',
-							openIndex: 1,
-							closeIndex: 2,
-							highIndex: 3,
-							lowIndex: 4,
-							valIndex: 2
+							openIndex: window.fields.indexOf('open_px'),
+							closeIndex: window.fields.indexOf('close_px'),
+							highIndex: window.fields.indexOf('high_px'),
+							lowIndex: window.fields.indexOf('low_px'),
+							valIndex: window.fields.indexOf('close_px')
 						}, {
 							name: '均线',
 							seriesType: 'mountain',
-							openIndex: 1,
-							closeIndex: 2,
-							highIndex: 3,
-							lowIndex: 4,
-							valIndex: 9
+							openIndex: window.fields.indexOf('open_px'),
+							closeIndex: window.fields.indexOf('close_px'),
+							highIndex: window.fields.indexOf('high_px'),
+							lowIndex: window.fields.indexOf('low_px'),
+							valIndex: window.fields.indexOf('close_px')
 						}]
 					},
 					viewport: {
