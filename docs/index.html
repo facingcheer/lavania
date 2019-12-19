@@ -90,7 +90,7 @@
 		background-position: 50%;
 	}
 	.configure {
-		overflow: auto;
+		overflow: visible;
 	}
 	.gutter.gutter-vertical {
 		background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB4AAAAFAQMAAABo7865AAAABlBMVEVHcEzMzMzyAv2sAAAAAXRSTlMAQObYZgAAABBJREFUeF5jOAMEEAIEEFwAn3kMwcB6I2AAAAAASUVORK5CYII=');
@@ -149,12 +149,13 @@
       <p class="browsehappy">You are using an <strong>outdated</strong> browser. Please <a href="#">upgrade your browser</a> to improve your experience.</p>
     <![endif]-->
 	<div class="main">
+		<div id="configure" class="configure">
+		</div>
 		<div id="chart-main" class="chart-main">
 			<div id="chart" class="chart">
 			</div>
 		</div>
-		<div id="configure" class="configure">
-		</div>
+		
 	</div>
 
 	<script type="module">
