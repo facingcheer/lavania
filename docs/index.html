@@ -195,7 +195,7 @@
 						}
 					},
 					seriesInfo: {
-						timeIndex: 0,
+						timeIndex: window.fields.indexOf('tick_at'),
 						mainSeriesIndex: 0,
 						// timeRanges: [[1479931200 * 1000, 1479970800 * 1000],
 						// 						[1482148800 * 1000, 1482552000 * 1000]],
@@ -208,7 +208,7 @@
 							closeIndex: window.fields.indexOf('close_px'),
 							highIndex: window.fields.indexOf('high_px'),
 							lowIndex: window.fields.indexOf('low_px'),
-							valIndex: window.fields.indexOf('avg_px')
+							valIndex: window.fields.indexOf('ma2')
 						}, {
 							name: '均线',
 							seriesType: 'mountain',
@@ -216,7 +216,7 @@
 							closeIndex: window.fields.indexOf('close_px'),
 							highIndex: window.fields.indexOf('high_px'),
 							lowIndex: window.fields.indexOf('low_px'),
-							valIndex: window.fields.indexOf('avg_px')
+							valIndex: window.fields.indexOf('ma2')
 						}]
 					},
 					viewport: {
