@@ -1,7 +1,8 @@
 import Utils from './Utils'
 import dateFormatter from './utils/dateFormatter'
 import textLabelPainter from './painter/textLabelPainter'
-import rafThrottle from './utils/rafThrottle'
+// import rafThrottle from './utils/rafThrottle'
+import throttle from 'lodash.throttle'
 
 export function genEvent(chart, type) {
 	let e = {}
@@ -20,7 +21,7 @@ export function genEvent(chart, type) {
 	}
 
 	Object.entries(eventSource[type]).forEach(([ name, func ]) => {
-		e[name] = rafThrottle((event) => {
+		e[name] = throttle((event) => {
 			if (!event) {
 				return
 			}
@@ -30,7 +31,7 @@ export function genEvent(chart, type) {
 					func(linkedChart, event, true)
 				})
 			}
-		})
+		}, 10)
 	})
 	return e
 }
@@ -428,7 +429,7 @@ const getNearest = {
 				let right = Math.round(left + ratio * width)
 				if (xpos >= left && xpos <= right) {
 					rangeIndex = i
-					break;
+					break
 				}
 			}
 		}
