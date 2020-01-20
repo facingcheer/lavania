@@ -1210,15 +1210,16 @@ function () {
         var seriesConf;
 
         if (s.seriesType && chartPainter[s.seriesType] && s.seriesType !== 'column') {
-          seriesConf = Object.assign({}, s, {
+          seriesConf = merge({}, {
             style: style.seriesStyle[s.seriesType]
-          });
+          }, s);
           chartPainter[s.seriesType](ctx, filteredData.data, coord, seriesConf, viewport);
         }
 
         if (s.seriesType === 'column') {
-          seriesConf = Object.assign({}, s, {
-            style: style.seriesStyle[s.seriesType]
+          seriesConf = merge({}, {
+            style: style.seriesStyle[s.seriesType],
+            s: s
           });
 
           if (type === 'unscalable') {

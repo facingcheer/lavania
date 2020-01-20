@@ -3455,6 +3455,7 @@ function () {
           viewport = _this$_chart.viewport;
       var coord = dataProvider.coord; // draw horizontal lines
 
+      debugger;
       var hLines = coord.horizLines.slice(1, -1); // console.log(hLines)
 
       if (coord.horizLines && style.grid.showHorizoneLines) {
@@ -3512,15 +3513,18 @@ function () {
         var seriesConf;
 
         if (s.seriesType && chartPainter[s.seriesType] && s.seriesType !== 'column') {
-          seriesConf = Object.assign({}, s, {
+          seriesConf = merge_1({}, {
             style: style.seriesStyle[s.seriesType]
-          });
+          }, s);
+          debugger;
+          console.log(seriesConf.style);
           chartPainter[s.seriesType](ctx, filteredData.data, coord, seriesConf, viewport);
         }
 
         if (s.seriesType === 'column') {
-          seriesConf = Object.assign({}, s, {
-            style: style.seriesStyle[s.seriesType]
+          seriesConf = merge_1({}, {
+            style: style.seriesStyle[s.seriesType],
+            s: s
           });
 
           if (type === 'unscalable') {
@@ -4745,6 +4749,7 @@ function calcBoxPositionInBounding(origin, box, bounding) {
   } else {
     if (origin.y - box.height - minMargin < 0) {
       console.warn('tooltip is too high to set in chart');
+      console.log('tooltip is too high to set in chart');
       verticalPos = bounding.height - box.height - minMargin;
     } else {
       verticalPos = origin.y - box.height - minMargin;

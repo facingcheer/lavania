@@ -2,7 +2,7 @@ import Utils from './Utils'
 import Draw from './utils/Draw'
 import { chartPainter } from './painter/index'
 import dateFormatter from './utils/dateFormatter'
-
+import merge from 'lodash/merge'
 
 export default class Render {
   constructor(chart) {
@@ -71,11 +71,13 @@ export default class Render {
    series.map(s => {
     let seriesConf
      if (s.seriesType && chartPainter[s.seriesType] && s.seriesType !== 'column') {
-      seriesConf = Object.assign({}, s, {style: style.seriesStyle[s.seriesType]})
+      seriesConf = merge({}, {style: style.seriesStyle[s.seriesType]}, s)
+      debugger
+      console.log(seriesConf.style)
       chartPainter[s.seriesType](ctx, filteredData.data, coord, seriesConf, viewport)
      }
      if(s.seriesType === 'column') {
-        seriesConf = Object.assign({}, s, {style: style.seriesStyle[s.seriesType]})
+        seriesConf = merge({}, {style: style.seriesStyle[s.seriesType], s})
        if(type === 'unscalable') {
         chartPainter.panesColumn(ctx, panes, coord, seriesConf,  viewport)
        }

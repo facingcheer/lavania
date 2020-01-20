@@ -114,222 +114,60 @@
   <script type="module">
     import { Chart, linkCharts } from "./index.esm.bundle.js"
       (function(){
-        var pattern = {
+        const dataSource = [
+        [1479931200000,1.0549,1.0553,1.0557,1.0548,-0.001,-0.001,-0.002,1.0554000000000001,1.0564699999999998],
+        [1479934800000,1.0553,1.0554,1.0554,1.0549,-0.001,-0.002,-0.002,1.0553,1.0557800000000002],
+        [1479938400000,1.0553,1.0553,1.0556,1.0547,-0.001,-0.002,-0.002,1.0552199999999998,1.05519],
+        [1479942000000,1.0551,1.0542,1.0551,1.0539,-0.001,-0.002,-0.002,1.0550199999999998,1.0550399999999998],
+        [1479945600000,1.0543,1.0539,1.0545,1.0533,-0.001,-0.002,-0.002,1.0548199999999999,1.0549],
+        [1479949200000,1.0541,1.0535,1.0544,1.0532,0,-0.002,-0.002,1.05446,1.0549300000000001],
+        [1479952800000,1.0535,1.053,1.0539,1.0528,0,-0.002,-0.002,1.05398,1.0546399999999998],
+        [1479956400000,1.053,1.0532,1.0537,1.0525,0,-0.002,-0.002,1.0535600000000003,1.0543900000000002],
+        [1479960000000,1.0533,1.0544,1.0545,1.0532,0,-0.002,-0.002,1.0535999999999999,1.0543099999999996],
+        [1479963600000,1.0543,1.0547,1.0551,1.0541,0,-0.002,-0.002,1.05376,1.0542899999999997]]
+      const pattern = {
           type: 'scalable',
-          seriesInfo: {
-            timeIndex: 0,
-            series: [
-              // {name: '分时图', type: 'line', valIndex: 2},
-              // {name: 'K2线', type: 'candlestick', o: 1, c: 2, h: 3, l: 4},
-              {name: 'K线', seriesType: 'candlestick', o: 1, c: 2, h: 3, l: 4, valIndex: 9, snapToProp: 'c'},
-
-              // {name: 'K线', type: 'candlestick', as: 'mountain', t: 0, o: 1, c: 2, h: 3, l: 4}, // 这句可以显示山型线
-              {name: '均线', seriesType: 'mountain', valIndex: 9}
-            ]
-          },
-          viewport: {
-            barWidth: 10,
-            offset: 0
-          }
-        };
-
-        var chart = new Chart(document.getElementById('chart1'), window.fake_data, pattern)
-
-        chart.updateOption({
-          zoomSpeed: 2,
-          crosshair: {
-            dash: [5,5]
-          }
-        })
-      var container = document.getElementById("configure")
-      var options = {
-          // ajv: Ajv({ allErrors: true, verbose: true }),
-          mode: 'tree',
-          schema: chart.schema,
-          onEditable: (node) => {
-            // node is an object like:
-            //   {
-            //     field: 'FIELD',
-            //     value: 'VALUE',
-            //     path: ['PATH', 'TO', 'NODE']
-            //   }
-            switch (node.field) {
-              case 'type':
-                return false
-
-              default:
-                return {
-                field: false,
-                value: true
-              }
+          grid:{
+            lineColor: {
+              x: 'transparent'
             }
           },
-          colorPicker: true,
-          onChange() {
-            chart.updateOption(editor.get())
-          },
-          onChangeText() {
-            // applyHint()
-          }
-        };
-      var editor = new JSONEditor(container, options)
-      editor.set(chart.style)
-
-      function applyHint() {
-        Array.prototype.forEach.call(document.querySelectorAll('.jsoneditor-field'), (el)=> {
-          if(el.getAttribute('title')) {
-            el.setAttribute('aria-label', el.getAttribute('title'))
-            el.setAttribute('title', '')
-            if(!el.classList.contains('hint--medium')){
-              el.classList.add('hint--medium')
-            }
-            if(!el.classList.contains('hint--bottom')){
-              el.classList.add('hint--bottom')
-            }
-          }
-        })
-      }
-
-      document.addEventListener('click', e => {
-        if(e.target.classList.contains('jsoneditor-button')){
-          applyHint()
-        }
-      })
-      applyHint()
-
-        var pattern11 = {
-          type: 'scalable',
-          seriesInfo: {
-            touchTop: true,
-            timeIndex: 0,
-            series: [
-              // {name: '均线', type: 'line', t: 0, valIndex: 9, color: 'orange', lineWidth: 1},
-
-              // column can use baseVal or baseIndex to detect a value(it's a array) should be up or down
-              // all value will compare with baseValue if provided
-              // if no baseVal is provide, baseIndex for inner compare
-              // example for baseIndex : data Like [1480464000000, 1.0647, 1.0648, 1.066, 1.0646, 0.001, 0.001, 0.001, 1.0648, 1.0640399999999999], 1.0647 stand for opening-price & 1.0648 stand for close-price
-              // we can set valIndex as 2 and  the baseIndex as 1, so each data will compare it's close with it's opening
-              // if all the set not good enough you can use detect function to define it your self
-              {name: '均线', seriesType: 'column', valIndex: 10, color:
-              {
-                up: '#FF4040',
-                down: '#1EB955',
-                // detect(item, index, pane, paneIndex, panes) {
-                //   // function provide for detect a value should be up or down
-                //   return item[2] >= pane[0][2] ? 'up' : 'down'
-                // }
-              }, baseVal: 400, lineWidth: 5,
-                // mode:'bidirection',
-                // linearMode: true
-              }
-            ]
-          },
-          viewport: {
-            barWidth: 10,
-            offset: 0
-          }
-        }
-        var chart11 = new Chart(document.getElementById('chart11'), window.fake_data.map(d => {d.push(~~(Math.random() * 1000 + 100)); return d}), pattern11)
-        // setTimeout(() => {
-        //   chart11.style.grid.color.x = 'transparent'
-        //   chart11.style.grid.color.y = 'transparent'
-        //   chart11.style.axis.labelColor = 'transparent'
-        //   chart11.rerender()
-        // }, 0);
-        chart11.updateOption({
-          grid: {
-            color: {
-              x: 'transparent',
-              y: 'transparent'
-            }
-          },
+          padding: {top: 20, right: 70, bottom: 28, left: 100},    
           axis: {
             label: {
-              right: {
+              right:{
                 show: false
               },
-              bottom: {
-                show: false
+              left:{
+                show: true,
+                offset: {x: -20, y: 0},
               }
             }
-          }
-        })
-
-        linkCharts(chart, chart11)
-
-        var pattern2 = {
-          seriesInfo: {
-            // touchTop: true,
-            timeIndex: 0,
-            series: [
-              {name: '分时图', seriesType: 'line', valIndex: 2},
-              // {name: '均线', type: 'line', t: 0, valIndex: 9, color: 'orange', lineWidth: 1},
-
-              // column can use baseVal or baseIndex to detect a value(it's a array) should be up or down
-              // all value will compare with baseVal if provided
-              // if no baseVal is provide, baseIndex for inner compare
-              // example for baseIndex : data Like [1480464000000, 1.0647, 1.0648, 1.066, 1.0646, 0.001, 0.001, 0.001, 1.0648, 1.0640399999999999], 1.0647 stand for opening-price & 1.0648 stand for close-price
-              // we can set valIndex as 2 and  the baseIndex as 1, so each data will compare it's close with it's opening
-              // if all the set not good enough you can use detect function to define it your self
-              {name: '均线', seriesType: 'column', valIndex: 2, color:
-              {
-                up: '#FF4040',
-                down: '#1EB955',
-                // detect(item, index, pane, paneIndex, panes) {
-                //   // function provide for detect a value should be up or down
-                //   return item[2] >= pane[0][2] ? 'up' : 'down'
-                // }
-              }, baseIndex: 9, lineWidth: 3, mode:'bidirection'}
-            ],
-            // timeRanges: [[1479931200 * 1000, 1479970800 * 1000],
-            //               [1482148800 * 1000, 1482552000 * 1000]],
-            timeRanges: [[1479931200 * 1000, 1479970800 * 1000],
-                          [1482148800 * 1000, 1482552000 * 1000]],
-            timeRangesRatio: [0.2, 0.8],
-            baseValue: 1.06
-          }
-        };
-        var chart2= new Chart(document.getElementById('chart2'), window.fake_data, pattern2)
-
-
-        var pattern3 = {
-          seriesInfo: {
-            touchTop: true,
-            timeIndex: 0,
-            series: [
-              // {name: '均线', type: 'line', t: 0, valIndex: 9, color: 'orange', lineWidth: 1},
-
-              // column can use baseVal or baseIndex to detect a value(it's a array) should be up or down
-              // all value will compare with baseValue if provided
-              // if no baseVal is provide, baseIndex for inner compare
-              // example for baseIndex : data Like [1480464000000, 1.0647, 1.0648, 1.066, 1.0646, 0.001, 0.001, 0.001, 1.0648, 1.0640399999999999], 1.0647 stand for opening-price & 1.0648 stand for close-price
-              // we can set valIndex as 2 and  the baseIndex as 1, so each data will compare it's close with it's opening
-              // if all the set not good enough you can use detect function to define it your self
-              {name: '均线', seriesType: 'column', valIndex: 2, color:
-              {
-                up: '#FF4040',
-                down: '#1EB955',
-                // detect(item, index, pane, paneIndex, panes) {
-                //   // function provide for detect a value should be up or down
-                //   return item[2] >= pane[0][2] ? 'up' : 'down'
-                // }
-              }, baseVal: 1.044,
-              lineWidth: 3,
-              mode:'bidirection'}
-            ],
-            // timeRanges: [[1479931200 * 1000, 1479970800 * 1000],
-            //               [1482148800 * 1000, 1482552000 * 1000]],
-            timeRanges: [[1479931200 * 1000, 1479970800 * 1000],
-                          [1482148800 * 1000, 1482552000 * 1000]],
-            timeRangesRatio: [0.2, 0.8],
-            // baseValue: 1.06
-          }
-        };
-        var chart3 = new Chart(document.getElementById('chart3'),window.fake_data, pattern3)
-        setTimeout(() => {
-          linkCharts(chart2, chart3)
-        }, 0);
+          },
+					seriesInfo: {
+						timeIndex: 0,
+						series: [{
+							name: 'line1',
+							seriesType: 'mountain',
+              valIndex: 4,
+              style: {    // 山形线的颜色
+                lineWidth: 1,    // 价格线的粗细
+                lineColor: '#333',    // 价格线的颜色
+                gradientUp: 'red',    // 山形内部渐变色
+                gradientDown: 'green'
+              }
+						},{
+							name: 'line2',
+							seriesType: 'mountain',
+							valIndex: 3,
+						}]
+					},
+					viewport: {
+						barWidth: 100,
+						offset: 0
+					}
+				}
+      new Chart(document.getElementById('chart1'), dataSource, pattern)
     })()
   </script>
 </body>
