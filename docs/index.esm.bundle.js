@@ -3455,7 +3455,6 @@ function () {
           viewport = _this$_chart.viewport;
       var coord = dataProvider.coord; // draw horizontal lines
 
-      debugger;
       var hLines = coord.horizLines.slice(1, -1); // console.log(hLines)
 
       if (coord.horizLines && style.grid.showHorizoneLines) {
@@ -3474,8 +3473,8 @@ function () {
         var lineCount = coord.verticalLines.length;
         Draw.Stroke(ctx, function (ctx) {
           vLines.forEach(function (val, ind) {
-            ctx.moveTo(val.display + (ind === lineCount - 1 ? -1.5 : 0.5), viewport.top);
-            ctx.lineTo(val.display + (ind === lineCount - 1 ? -1.5 : 0.5), viewport.bottom);
+            ctx.moveTo(val.display + (ind === lineCount - 1 ? -0.5 : 0.5), viewport.top);
+            ctx.lineTo(val.display + (ind === lineCount - 1 ? -0.5 : 0.5), viewport.bottom);
           });
         }, style.grid.lineColor.y);
       }
@@ -3516,8 +3515,6 @@ function () {
           seriesConf = merge_1({}, {
             style: style.seriesStyle[s.seriesType]
           }, s);
-          debugger;
-          console.log(seriesConf.style);
           chartPainter[s.seriesType](ctx, filteredData.data, coord, seriesConf, viewport);
         }
 
@@ -4749,7 +4746,6 @@ function calcBoxPositionInBounding(origin, box, bounding) {
   } else {
     if (origin.y - box.height - minMargin < 0) {
       console.warn('tooltip is too high to set in chart');
-      console.log('tooltip is too high to set in chart');
       verticalPos = bounding.height - box.height - minMargin;
     } else {
       verticalPos = origin.y - box.height - minMargin;

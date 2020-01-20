@@ -40,8 +40,8 @@ export default class Render {
       const lineCount = coord.verticalLines.length
       Draw.Stroke(ctx, ctx => {
         vLines.forEach((val, ind) => {
-          ctx.moveTo((val.display + (ind === (lineCount - 1) ? -1.5 : 0.5)), viewport.top)
-          ctx.lineTo((val.display + (ind === (lineCount - 1) ? -1.5 : 0.5)), viewport.bottom)
+          ctx.moveTo((val.display + (ind === (lineCount - 1) ? -0.5 : 0.5)), viewport.top)
+          ctx.lineTo((val.display + (ind === (lineCount - 1) ? -0.5 : 0.5)), viewport.bottom)
         })
       }, style.grid.lineColor.y)
     }
